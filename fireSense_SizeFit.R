@@ -37,7 +37,7 @@ defineModule(sim, list(
                             stringsAsFactors=FALSE),
   outputObjects = data.frame(
     objectName = "fireSense_SizeFit",
-    objectClass = "list",
+    objectClass = "fireSense_SizeFit",
     other = NA_character_,
     stringsAsFactors = FALSE
   )
@@ -440,7 +440,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                   seTheta = setNames(se[(ntBeta + 1L):nt], colnames(mmTheta)))
       fit$fitted.values$beta <- fit$linkFunBeta$linkinv(drop(mmBeta %*% fit$coefBeta))
       fit$fitted.values$theta <- fit$linkFunTheta$linkinv(drop(mmTheta %*% fit$coefTheta))
-      sim$fireSense_SizeFit$fit <- fit
-      sim$fireSense_SizeFit$data <- NULL
+      sim$fireSense_SizeFit <- fit
+      class(sim$fireSense_SizeFit) <- "fireSense_SizeFit"
       invisible(sim)
     }
