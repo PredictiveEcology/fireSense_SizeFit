@@ -30,7 +30,7 @@ defineModule(sim, list(
     # defineParameter(".saveInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first save event should occur"),
     # defineParameter(".saveInterval", "numeric", NA, NA, NA, "This describes the simulation time at which the first save event should occur")
   ),
-  inputObjects = data.frame(objectName="datafireSense_SizeFit",
+  inputObjects = data.frame(objectName="dataFireSense_SizeFit",
                             objectClass="data.frame",
                             sourceURL="",
                             other=NA_character_,
@@ -167,10 +167,10 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
       }
       
       ## Coerce data to data.table if not already one
-      sim$fireSense_SizeFit$data <- if (!is(sim$datafireSense_SizeFit, "data.table")) {
-        data.table(sim$datafireSense_SizeFit)
+      sim$fireSense_SizeFit$data <- if (!is(sim$dataFireSense_SizeFit, "data.table")) {
+        data.table(sim$dataFireSense_SizeFit)
       } else {
-        sim$datafireSense_SizeFit
+        sim$dataFireSense_SizeFit
       }
       
       ## If there are rows in the dataset where y < a, remove them
