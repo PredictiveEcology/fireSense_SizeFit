@@ -431,7 +431,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
       ## Parameters scaling: Revert back estimated coefficients to their original scale
       op$par <- drop(op$par %*% scalMx)
       
-      fit <- list(formula = formula,
+      fit <- list(formula = params(sim)$fireSense_SizeFit$formula,
                   linkFunBeta = lnBeta,
                   linkFunTheta = lnTheta,
                   coefBeta = setNames(op$par[1:ntBeta], colnames(mmBeta)),
