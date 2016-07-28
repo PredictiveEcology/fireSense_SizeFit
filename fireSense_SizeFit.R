@@ -438,8 +438,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                   coefTheta = setNames(op$par[(ntBeta + 1L):nt], colnames(mmTheta)),
                   seBeta = setNames(se[1:ntBeta], colnames(mmBeta)),
                   seTheta = setNames(se[(ntBeta + 1L):nt], colnames(mmTheta)))
-      fit$fitted.values$beta <- fit$linkFunBeta$linkinv(drop(mmBeta %*% fit$coefBeta))
-      fit$fitted.values$theta <- fit$linkFunTheta$linkinv(drop(mmTheta %*% fit$coefTheta))
+
       sim$fireSense_SizeFit <- fit
       class(sim$fireSense_SizeFit) <- "fireSense_SizeFit"
       invisible(sim)
