@@ -439,7 +439,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                   seBeta = setNames(se[1:ntBeta], colnames(mmBeta)),
                   seTheta = setNames(se[(ntBeta + 1L):nt], colnames(mmTheta)))
 
-      sim$fireSense_SizeFit <- fit
-      class(sim$fireSense_SizeFit) <- "fireSense_SizeFit"
+      sim$fireSense_SizeFitted <- fit
+      class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
       invisible(sim)
     }
