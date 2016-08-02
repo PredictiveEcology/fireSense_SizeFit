@@ -233,7 +233,6 @@ fireSense_SizeFitRun <- function(sim) {
   ## Define parameter bounds automatically if they are not supplied by user
   ## First defined the bounds for DEoptim, the first optimizer
     ## Beta
-
       switch(lnBeta$name,
              log = {
                DEoptimUpperBound <-
@@ -284,54 +283,54 @@ fireSense_SizeFitRun <- function(sim) {
              }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$beta, "(beta) is not supported.")))
 
   ## Theta
-  switch(lnTheta$name,
-         log = {
-           DEoptimUpperBound <- c(DEoptimUpperBound,
-                                  if (is.null(p(sim)$ub$theta)) {
-                                    ## Automatically estimate an upper boundary for each parameter
-                                    (lm(update(formulaTheta, log(.) ~ .),
-                                        y = FALSE,
-                                        model = FALSE,
-                                        data = envData) %>%
-                                       coef %>%
-                                       abs) * 1.1
-                                  } else {
-                                    ## User-defined bounds
-                                    rep_len(p(sim)$ub$theta, ntTheta) ## Recycled if necessary
-                                  })
-
-           DEoptimLowerBound <- c(DEoptimLowerBound,
-                                  if(is.null(p(sim)$lb$theta)){
-                                    ## Automatically estimate a lower boundary for each parameter
-                                    -DEoptimUpperBound[(ntBeta + 1L):nt]
-                                  } else {
-                                    ## User-defined bounds
-                                    rep_len(p(sim)$lb$theta, ntTheta) ## Recycled if necessary
-                                  })
-         }, identity = {
-           DEoptimUpperBound <- c(DEoptimUpperBound,
-                                  if (is.null(p(sim)$ub$theta)) {
-                                    ## Automatically estimate an upper boundary for each parameter
-                                    (lm(formulaTheta,
-                                        y = FALSE,
-                                        model = FALSE,
-                                        data = envData) %>%
-                                       coef %>%
-                                       abs) * 1.1
-                                  } else {
-                                    ## User-defined bounds
-                                    rep_len(p(sim)$ub$theta, ntTheta) ## Recycled if necessary
-                                  })
-
-           DEoptimLowerBound <- c(DEoptimLowerBound,
-                                  if (is.null(p(sim)$lb$theta)) {
-                                    ## Automatically estimate an lower boundary for each parameter
-                                    rep_len(1e-30, ntTheta) ## Enforce non-negativity, recycled if necessary
-                                  } else {
-                                    ## User-defined bounds
-                                    rep_len(p(sim)$lb$theta, ntTheta) ## Recycled if necessary
-                                  })
-         }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$theta, "(theta) is not supported.")))
+    switch(lnTheta$name,
+           log = {
+             DEoptimUpperBound <- c(DEoptimUpperBound,
+                                    if (is.null(p(sim)$ub$theta)) {
+                                      ## Automatically estimate an upper boundary for each parameter
+                                      (lm(update(formulaTheta, log(.) ~ .),
+                                          y = FALSE,
+                                          model = FALSE,
+                                          data = envData) %>%
+                                         coef %>%
+                                         abs) * 1.1
+                                    } else {
+                                      ## User-defined bounds
+                                      rep_len(p(sim)$ub$theta, ntTheta) ## Recycled if necessary
+                                    })
+  
+             DEoptimLowerBound <- c(DEoptimLowerBound,
+                                    if(is.null(p(sim)$lb$theta)){
+                                      ## Automatically estimate a lower boundary for each parameter
+                                      -DEoptimUpperBound[(ntBeta + 1L):nt]
+                                    } else {
+                                      ## User-defined bounds
+                                      rep_len(p(sim)$lb$theta, ntTheta) ## Recycled if necessary
+                                    })
+           }, identity = {
+             DEoptimUpperBound <- c(DEoptimUpperBound,
+                                    if (is.null(p(sim)$ub$theta)) {
+                                      ## Automatically estimate an upper boundary for each parameter
+                                      (lm(formulaTheta,
+                                          y = FALSE,
+                                          model = FALSE,
+                                          data = envData) %>%
+                                         coef %>%
+                                         abs) * 1.1
+                                    } else {
+                                      ## User-defined bounds
+                                      rep_len(p(sim)$ub$theta, ntTheta) ## Recycled if necessary
+                                    })
+  
+             DEoptimLowerBound <- c(DEoptimLowerBound,
+                                    if (is.null(p(sim)$lb$theta)) {
+                                      ## Automatically estimate an lower boundary for each parameter
+                                      rep_len(1e-30, ntTheta) ## Enforce non-negativity, recycled if necessary
+                                    } else {
+                                      ## User-defined bounds
+                                      rep_len(p(sim)$lb$theta, ntTheta) ## Recycled if necessary
+                                    })
+           }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$theta, "(theta) is not supported.")))
 
   ## Then, define lower and upper bounds for the second optimizer (nlminb)
   ## Beta
@@ -421,8 +420,7 @@ fireSense_SizeFitRun <- function(sim) {
     ## Select best minimum amongst all trials
     op <- out[[which.min(sapply(out,"[[","objective"))]]
 
-    ## If starting values are supplied
-  } else if (is.list(p(sim)$start)) {
+  } else if (is.list(p(sim)$start)) { ## If starting values are supplied
 
     nlminb.call <- quote(nlminb(start=sv, objective = objFun, lower = nlminbLowerBound, upper = nlminbUpperBound,
                                 control=c(p(sim)$nlminb.control, list(trace = trace))))
@@ -444,8 +442,8 @@ fireSense_SizeFitRun <- function(sim) {
 
     ## Select best minimum amongst all trials
     op <- out[[which.min(sapply(out,"[[","objective"))]]
-  } else if (is.vector(p(sim)$start)) {
-    ## Vector of user-defined starting values
+  } else if (is.vector(p(sim)$start)) { ## Vector of user-defined starting values
+
     op <- nlminb(p(sim)$start,
                  objective = objFun,
                  lower = nlminbLowerBound,
