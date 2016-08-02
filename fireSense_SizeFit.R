@@ -84,8 +84,12 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
     sim <- sim$fireSense_SizeFitInit(sim)
 
     # schedule future event(s)
-    #sim <- scheduleEvent(sim, params(sim)$fireSense_SizeFit$.plotInitialTime, "fireSense_SizeFit", "plot")
-    #sim <- scheduleEvent(sim, params(sim)$fireSense_SizeFit$.saveInitialTime, "fireSense_SizeFit", "save")
+    #sim <- scheduleEvent(sim, p(sim)$.plotInitialTime, "fireSense_SizeFit", "plot")
+    #sim <- scheduleEvent(sim, p(sim)$.saveInitialTime, "fireSense_SizeFit", "save")
+  } else if (eventType == "run") {
+    
+    sim <- sim$fireSense_SizeFitRun(sim)
+    
   } else if (eventType == "save") {
     # ! ----- EDIT BELOW ----- ! #
     # do stuff for this event
@@ -114,37 +118,37 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
   ## Init/Fit function
     fireSense_SizeFitInit <- function(sim) {
       ## Check formula for beta
-      if (is.empty.model(params(sim)$fireSense_SizeFit$formula$beta))
+      if (is.empty.model(p(sim)$formula$beta))
         stop("fireSense_SizeFit> The specified formula (beta) is empty")
       
       ## Check formula for theta
-      if (is.empty.model(params(sim)$fireSense_SizeFit$formula$theta))
+      if (is.empty.model(p(sim)$formula$theta))
         stop("fireSense_SizeFit> The specified formula (theta) is empty")
       
       ## Coerce lnBeta to a link-glm object
-      if (is.character(params(sim)$fireSense_SizeFit$link$beta)) {
-        lnBeta <- make.link(params(sim)$fireSense_SizeFit$link$beta) 
-      } else if (is(params(sim)$fireSense_SizeFit$link$beta, "link-glm")) {
+      if (is.character(p(sim)$link$beta)) {
+        lnBeta <- make.link(p(sim)$link$beta) 
+      } else if (is(p(sim)$link$beta, "link-glm")) {
         ## Do nothing
       } else {
         ## Try to coerce to link-glm class
-        lnBeta <- make.link(params(sim)$fireSense_SizeFit$link$beta)
+        lnBeta <- make.link(p(sim)$link$beta)
       }
       
       ## Coerce lnTheta to a link-glm object
-      if (is.character(params(sim)$fireSense_SizeFit$link$theta)) {
-        lnTheta <- make.link(params(sim)$fireSense_SizeFit$link$theta)
-      } else if (is(params(sim)$fireSense_SizeFit$link$theta, "link-glm")) {
+      if (is.character(p(sim)$link$theta)) {
+        lnTheta <- make.link(p(sim)$link$theta)
+      } else if (is(p(sim)$link$theta, "link-glm")) {
         ## Do nothing
       } else {
-        lnTheta <- make.link(params(sim)$fireSense_SizeFit$link$theta)
+        lnTheta <- make.link(p(sim)$link$theta)
       }
       
       ## No tracing if trace < 0
-      trace <- if(params(sim)$fireSense_SizeFit$trace < 0) 0 else params(sim)$fireSense_SizeFit$trace
+      trace <- if(p(sim)$trace < 0) 0 else p(sim)$trace
       
       
-      tfBeta <- terms.formula(params(sim)$fireSense_SizeFit$formula$beta)
+      tfBeta <- terms.formula(p(sim)$formula$beta)
       
       if (attr(tfBeta, "response")) {
         y <- yBeta <- as.character(attr(tfBeta, "variables")[[2L]])
@@ -152,7 +156,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
         stop("fireSense_SizeFit> Incomplete formula (beta), the LHS is missing")
       }
       
-      tfTheta <- terms.formula(params(sim)$fireSense_SizeFit$formula$theta)
+      tfTheta <- terms.formula(p(sim)$formula$theta)
       
       if (attr(tfTheta, "response")) {
         yTheta <- as.character(attr(tfTheta, "variables")[[2L]])
@@ -174,7 +178,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
       }
       
       ## If there are rows in the dataset where y < a, remove them
-      rm <- sim$fireSense_SizeFit$data[, y] < params(sim)$fireSense_SizeFit$a
+      rm <- sim$fireSense_SizeFit$data[, y] < p(sim)$a
       
       if (all(rm)){
         stop("fireSense_SizeFit> All rows contain values outside of the range a <= x < Inf.")
@@ -203,9 +207,9 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
       switch(lnBeta$name, 
              log = {
                DEoptimUpperBound <- 
-                 if (is.null(params(sim)$fireSense_SizeFit$ub$theta)) {
+                 if (is.null(p(sim)$ub$theta)) {
                    ## Automatically estimate an upper boundary for each parameter       
-                   (lm(update(params(sim)$fireSense_SizeFit$formula$theta, log(.) ~ .),
+                   (lm(update(p(sim)$formula$theta, log(.) ~ .),
                        y = FALSE,
                        model = FALSE,
                        data = sim$fireSense_SizeFit$data) %>%
@@ -213,22 +217,22 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                       abs) * 1.1
                  } else {
                    ## User-defined bounds
-                   rep_len(params(sim)$fireSense_SizeFit$ub$theta, ntBeta) ## Recycled if necessary
+                   rep_len(p(sim)$ub$theta, ntBeta) ## Recycled if necessary
                  }
                
                DEoptimLowerBound <- 
-                 if (is.null(params(sim)$fireSense_SizeFit$lb$theta)) {
+                 if (is.null(p(sim)$lb$theta)) {
                    ## Automatically estimate a lower boundary for each parameter 
                    -DEoptimUpperBound
                  } else {
                    ## User-defined bounds
-                   rep_len(params(sim)$fireSense_SizeFit$lb$theta, ntBeta) ## Recycled if necessary
+                   rep_len(p(sim)$lb$theta, ntBeta) ## Recycled if necessary
                  }       
              }, identity = {
                DEoptimUpperBound <-
-                 if (is.null(params(sim)$fireSense_SizeFit$ub$theta)) {
+                 if (is.null(p(sim)$ub$theta)) {
                    ## Automatically estimate an upper boundary for each parameter
-                   (lm(params(sim)$fireSense_SizeFit$formula$theta,
+                   (lm(p(sim)$formula$theta,
                        y = FALSE,
                        model = FALSE,
                        data = sim$fireSense_SizeFit$data) %>%
@@ -236,26 +240,26 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                       abs) * 1.1
                  } else {
                    ## User-defined bounds
-                   rep_len(params(sim)$fireSense_SizeFit$ub$theta, ntBeta) ## Recycled if necessary
+                   rep_len(p(sim)$ub$theta, ntBeta) ## Recycled if necessary
                  } 
                
                DEoptimLowerBound <-
-                 if(is.null(params(sim)$fireSense_SizeFit$lb$theta)){
+                 if(is.null(p(sim)$lb$theta)){
                    ## Automatically estimate an lower boundary for each parameter 
                    rep_len(1e-30, ntBeta) ## Enforce non-negativity, recycled if necessary
                  } else {
                    ## User-defined bounds
-                   rep_len(params(sim)$fireSense_SizeFit$lb$theta, ntBeta) ## Recycled if necessary
+                   rep_len(p(sim)$lb$theta, ntBeta) ## Recycled if necessary
                  }     
-             }, stop(paste("fireSense_SizeFit> Link function", params(sim)$fireSense_SizeFit$link$theta, "(theta) is not supported.")))
+             }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$theta, "(theta) is not supported.")))
       
       ## Theta
       switch(lnTheta$name, 
              log = {
                DEoptimUpperBound <- c(DEoptimUpperBound,
-                                      if (is.null(params(sim)$fireSense_SizeFit$ub$theta)) {
+                                      if (is.null(p(sim)$ub$theta)) {
                                         ## Automatically estimate an upper boundary for each parameter       
-                                        (lm(update(params(sim)$fireSense_SizeFit$formula$theta, log(.) ~ .),
+                                        (lm(update(p(sim)$formula$theta, log(.) ~ .),
                                             y = FALSE,
                                             model = FALSE,
                                             data = sim$fireSense_SizeFit$data) %>%
@@ -263,22 +267,22 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                                            abs) * 1.1
                                       } else {
                                         ## User-defined bounds
-                                        rep_len(params(sim)$fireSense_SizeFit$ub$theta, ntTheta) ## Recycled if necessary
+                                        rep_len(p(sim)$ub$theta, ntTheta) ## Recycled if necessary
                                       })
                
                DEoptimLowerBound <- c(DEoptimLowerBound,
-                                      if(is.null(params(sim)$fireSense_SizeFit$lb$theta)){
+                                      if(is.null(p(sim)$lb$theta)){
                                         ## Automatically estimate a lower boundary for each parameter 
                                         -DEoptimUpperBound[(ntBeta + 1L):nt]
                                       } else {
                                         ## User-defined bounds
-                                        rep_len(params(sim)$fireSense_SizeFit$lb$theta, ntTheta) ## Recycled if necessary
+                                        rep_len(p(sim)$lb$theta, ntTheta) ## Recycled if necessary
                                       })
              }, identity = {
                DEoptimUpperBound <- c(DEoptimUpperBound,
-                                      if (is.null(params(sim)$fireSense_SizeFit$ub$theta)) {
+                                      if (is.null(p(sim)$ub$theta)) {
                                         ## Automatically estimate an upper boundary for each parameter
-                                        (lm(params(sim)$fireSense_SizeFit$formula$theta,
+                                        (lm(p(sim)$formula$theta,
                                             y = FALSE,
                                             model = FALSE,
                                             data = sim$fireSense_SizeFit$data) %>%
@@ -286,23 +290,23 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                                            abs) * 1.1
                                       } else {
                                         ## User-defined bounds
-                                        rep_len(params(sim)$fireSense_SizeFit$ub$theta, ntTheta) ## Recycled if necessary
+                                        rep_len(p(sim)$ub$theta, ntTheta) ## Recycled if necessary
                                       })
                
                DEoptimLowerBound <- c(DEoptimLowerBound,
-                                      if (is.null(params(sim)$fireSense_SizeFit$lb$theta)) {
+                                      if (is.null(p(sim)$lb$theta)) {
                                         ## Automatically estimate an lower boundary for each parameter 
                                         rep_len(1e-30, ntTheta) ## Enforce non-negativity, recycled if necessary
                                       } else {
                                         ## User-defined bounds
-                                        rep_len(params(sim)$fireSense_SizeFit$lb$theta, ntTheta) ## Recycled if necessary
+                                        rep_len(p(sim)$lb$theta, ntTheta) ## Recycled if necessary
                                       })
-             }, stop(paste("fireSense_SizeFit> Link function", params(sim)$fireSense_SizeFit$link$theta, "(theta) is not supported.")))
+             }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$theta, "(theta) is not supported.")))
       
       ## Then, define lower and upper bounds for the second optimizer (nlminb)
       ## Beta
       nlminbUpperBound <-
-        if(is.null(params(sim)$fireSense_SizeFit$ub$beta)){
+        if(is.null(p(sim)$ub$beta)){
           rep_len(Inf, ntBeta)
         } else {
           ## User-defined lower bounds for parameters to be estimated
@@ -310,7 +314,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
         }
       
       nlminbLowerBound <- 
-        if(is.null(params(sim)$fireSense_SizeFit$lb$beta)){
+        if(is.null(p(sim)$lb$beta)){
           switch(lnBeta$name,
                  log = -Inf,            ## log-link, default: -Inf for terms and 0 for breakpoints/knots
                  identity = 1e-30) %>%  ## identity link, default: enforce non-negativity
@@ -322,7 +326,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
       
       ## Theta
       nlminbUpperBound <- c(nlminbUpperBound,
-                            if(is.null(params(sim)$fireSense_SizeFit$ub$theta)){
+                            if(is.null(p(sim)$ub$theta)){
                               rep_len(Inf, ntTheta)
                             } else {
                               ## User-defined lower bounds for parameters to be estimated
@@ -330,7 +334,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                             })
       
       nlminbLowerBound <- c(nlminbLowerBound,
-                            if(is.null(params(sim)$fireSense_SizeFit$lb$theta)){
+                            if(is.null(p(sim)$lb$theta)){
                               switch(lnTheta$name,
                                      log = -Inf,            ## log-link, default: -Inf for terms and 0 for breakpoints/knots
                                      identity = 1e-30) %>%  ## identity link, default: enforce non-negativity
@@ -341,10 +345,10 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                             })
       
       ## Define the log-likelihood function (objective function)
-      sim$nll <- parse(text = paste0("-sum(dtappareto(sim$fireSense_SizeFit$data[, ", y, "], lambda=beta, theta=theta, a=", params(sim)$fireSense_SizeFit$a, ", log=TRUE))"))
+      sim$nll <- parse(text = paste0("-sum(dtappareto(sim$fireSense_SizeFit$data[, ", y, "], lambda=beta, theta=theta, a=", p(sim)$a, ", log=TRUE))"))
       
       ## If starting values are not supplied
-      if (is.null(params(sim)$fireSense_SizeFit$start)) {
+      if (is.null(p(sim)$start)) {
         ## First optimizer, get rough estimates of the parameter values
         ## Use these estimates to compute the order of magnitude of these parameters
         #     opDE <- DEoptim::DEoptim(objFun,lower=DEoptimLowerBound,upper=DEoptimUpperBound, control = DEoptim::DEoptim.control(itermax = 500L, trace = trace))
@@ -368,7 +372,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
                     list(unname(JDE$par/oom(JDE$par))))
         
         nlminb.call <- quote(nlminb(start=sv, objective = objFun, lower = nlminbLowerBound, upper = nlminbUpperBound, 
-                                    control=c(params(sim)$fireSense_SizeFit$nlminb.control, list(trace = trace))))
+                                    control=c(p(sim)$nlminb.control, list(trace = trace))))
         nlminb.call[names(formals(objFun)[-1L])] <- parse(text = formalArgs(objFun)[-1L])
         
         out <- lapply(svList,function(sv){
@@ -388,14 +392,14 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
         op <- out[[which.min(sapply(out,"[[","objective"))]]
         
         ## If starting values are supplied
-      } else if (is.list(params(sim)$fireSense_SizeFit$start)) {
+      } else if (is.list(p(sim)$start)) {
         
         nlminb.call <- quote(nlminb(start=sv, objective = objFun, lower = nlminbLowerBound, upper = nlminbUpperBound, 
-                                    control=c(params(sim)$fireSense_SizeFit$nlminb.control, list(trace = trace))))
+                                    control=c(p(sim)$nlminb.control, list(trace = trace))))
         nlminb.call[names(formals(objFun)[-1L])] <- parse(text = formalArgs(objFun)[-1L])
         
         ## List of vectors of user-defined starting values
-        out <- lapply(params(sim)$fireSense_SizeFit$start, function(sv) {
+        out <- lapply(p(sim)$start, function(sv) {
           op <- eval(nlminb.call)
           
           i <- 1L
@@ -410,13 +414,13 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
         
         ## Select best minimum amongst all trials
         op <- out[[which.min(sapply(out,"[[","objective"))]]
-      } else if (is.vector(params(sim)$fireSense_SizeFit$start)) {
+      } else if (is.vector(p(sim)$start)) {
         ## Vector of user-defined starting values
-        op <- nlminb(params(sim)$fireSense_SizeFit$start, 
+        op <- nlminb(p(sim)$start, 
                      objective = objFun,
                      lower = nlminbLowerBound,
                      upper = nlminbUpperBound,
-                     control = params(sim)$fireSense_SizeFit$nlminb.control)
+                     control = p(sim)$nlminb.control)
       }
       
       ## Compute the standard errors around the estimates
@@ -431,7 +435,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
       ## Parameters scaling: Revert back estimated coefficients to their original scale
       op$par <- drop(op$par %*% scalMx)
       
-      fit <- list(formula = params(sim)$fireSense_SizeFit$formula,
+      fit <- list(formula = p(sim)$formula,
                   linkFunBeta = lnBeta,
                   linkFunTheta = lnTheta,
                   coefBeta = setNames(op$par[1:ntBeta], colnames(mmBeta)),
