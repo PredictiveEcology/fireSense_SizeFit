@@ -474,5 +474,9 @@ fireSense_SizeFitRun <- function(sim) {
                                    seTheta = setNames(se[(ntBeta + 1L):nt], colnames(mmTheta)))
 
   class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
-  invisible(sim)
+  
+  if (!is.na(p(sim)$intervalRunModule))
+    sim <- scheduleEvent(sim, time(sim) + p(sim)$intervalRunModule, "fireSense_SizePredict", "run")
+  
+  sim
 }
