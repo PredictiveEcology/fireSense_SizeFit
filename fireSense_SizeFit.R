@@ -30,9 +30,6 @@ defineModule(sim, list(
       desc = "optional. A character vector indicating the names of objects present in the sim environment, in which
               to look for variables with which to predict. Objects can be data.frames. If omitted, or if variables
               are not found in the data objects, variables are searched in the sim environment."),
-    defineParameter(name = "mapping", class = "character", default = NULL,
-      desc = "optional. Named character vector to map variable names in the formula to those in the data objects.
-              Names of unmapped variables are used directly to look for variables in data objects or in the sim environment."),
     defineParameter(name = "initialRunTime", class = "numeric", default = NA, desc = "optional. Simulation time at which to start this module. If omitted, start at start(sim)."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")
   ),
@@ -161,24 +158,6 @@ fireSense_SizeFitRun <- function(sim) {
   
   if (!identical(yBeta, yTheta))
     stop("fireSense_SizeFit> the response variables for beta and theta must be identical.")
-
-  
-  ## Mapping variables names to data
-  if (!is.null(p(sim)$mapping)) {
-    
-    for (i in 1:length(p(sim)$mapping)) {
-      
-      attr(termsBeta, "term.labels") <- gsub(pattern = names(p(sim)$mapping[i]),
-                                             replacement = p(sim)$mapping[i], x = attr(termsBeta, "term.labels"))
-      attr(termsTheta, "term.labels") <- gsub(pattern = names(p(sim)$mapping[i]),
-                                              replacement = p(sim)$mapping[i], x = attr(termsTheta, "term.labels"))
-    }
-    
-  }
-  
-  formulaBeta <- reformulate(attr(termsBeta, "term.labels"), y, attr(termsBeta, "intercept"))
-  formulaTheta <- reformulate(attr(termsTheta, "term.labels"), y, attr(termsTheta, "intercept"))
-  
     
   ## Coerce lnBeta to a link-glm object
   if (is.character(p(sim)$link$beta)) {
@@ -223,8 +202,8 @@ fireSense_SizeFitRun <- function(sim) {
 
   ## Define the scaling matrices. This is used later in the optimization process
   ## to rescale parameter values between 0 and 1, i.e. put all variables on the same scale.
-  scalMx <- matrix(0L, nt, nt)
-  diag(scalMx) <- 1L
+  scalMx <- matrix(0, nt, nt)
+  diag(scalMx) <- 1
 
   ## Design matrices
   mmBeta <- model.matrix(termsBeta, envData)
