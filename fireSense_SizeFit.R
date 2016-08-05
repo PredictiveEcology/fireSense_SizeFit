@@ -29,7 +29,7 @@ defineModule(sim, list(
     defineParameter(name = "data", class = "character", default = NULL,
       desc = "optional. A character vector indicating the names of objects present in the sim environment, in which
               to look for variables with which to predict. Objects can be data.frames. If omitted, or if variables
-              are not found in the data objects, variables are searched in the sim environment."),
+              are not found in data objects, variables are searched in the sim environment."),
     defineParameter(name = "initialRunTime", class = "numeric", default = NA, desc = "optional. Simulation time at which to start this module. If omitted, start at start(sim)."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")
   ),
