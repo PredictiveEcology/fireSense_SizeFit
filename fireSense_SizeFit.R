@@ -30,7 +30,8 @@ defineModule(sim, list(
       desc = "optional. A character vector indicating the names of objects present in the sim environment, in which
               to look for variables with which to predict. Objects can be data.frames. If omitted, or if variables
               are not found in data objects, variables are searched in the sim environment."),
-    defineParameter(name = "initialRunTime", class = "numeric", default = NA, desc = "optional. Simulation time at which to start this module. If omitted, start at start(sim)."),
+    defineParameter(name = "initialRunTime", class = "numeric", default = NA,
+      desc = "optional. Simulation time at which to start this module. If omitted, start at start(simList)."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")
   ),
   inputObjects = data.frame(objectName="dataFireSense_SizeFit",
@@ -46,49 +47,15 @@ defineModule(sim, list(
   )
 ))
 
-## Toolbox: set of functions used internally by the module
-  ## Compute the order of magnitude
-  oom <- function(x){
-    10^(ceiling(log10(abs(x))))
-  }
-
-  ## Function to pass to the optimizer
-  objFun <- function(params, scalMx, mmBeta, mmTheta, ntBeta, nt, lnBeta, lnTheta, y, envData){
-
-    ## Parameters scaling
-      params <- drop(params %*% scalMx)
-
-    beta <- drop(mmBeta %*% params[1:ntBeta])
-    theta <- drop(mmTheta %*% params[(ntBeta + 1L):nt])
-
-    if(length(beta) == 1L) beta <- rep_len(beta, length(theta)) ## Recycled if needed
-    if(length(theta) == 1L) theta <- rep_len(theta, length(beta)) ## Recycled if needed
-
-    ## link implementation
-      beta <- lnBeta$linkinv(beta)
-      theta <- lnTheta$linkinv(theta)
-
-    if(any(beta <= 0L) || anyNA(beta) || any(is.infinite(beta)) || any(theta <= 0L) || anyNA(theta) || any(is.infinite(theta))){
-      return(1e20)
-    } else {
-      return(eval(nll))
-    }
-  }
 
 ## event types
 #   - type `init` is required for initialiazation
 
 doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
   if (eventType == "init") {
-    ### check for more detailed object dependencies:
-    ### (use `checkObject` or similar)
 
-    # do stuff for this event
     sim <- sim$fireSense_SizeFitInit(sim)
 
-    # schedule future event(s)
-    #sim <- scheduleEvent(sim, p(sim)$.plotInitialTime, "fireSense_SizeFit", "plot")
-    #sim <- scheduleEvent(sim, p(sim)$.saveInitialTime, "fireSense_SizeFit", "save")
   } else if (eventType == "run") {
 
     sim <- sim$fireSense_SizeFitRun(sim)
@@ -127,6 +94,35 @@ fireSense_SizeFitInit <- function(sim) {
 
 fireSense_SizeFitRun <- function(sim) {
 
+  ## Toolbox: set of functions used internally by the module
+    ## Compute the order of magnitude
+      oom <- function(x){
+        10^(ceiling(log10(abs(x))))
+      }
+    
+    ## Function to pass to the optimizer
+      objFun <- function(params, scalMx, mmBeta, mmTheta, ntBeta, nt, lnBeta, lnTheta, y, envData){
+        
+        ## Parameters scaling
+        params <- drop(params %*% scalMx)
+        
+        beta <- drop(mmBeta %*% params[1:ntBeta])
+        theta <- drop(mmTheta %*% params[(ntBeta + 1L):nt])
+        
+        if(length(beta) == 1L) beta <- rep_len(beta, length(theta)) ## Recycled if needed
+        if(length(theta) == 1L) theta <- rep_len(theta, length(beta)) ## Recycled if needed
+        
+        ## link implementation
+        beta <- lnBeta$linkinv(beta)
+        theta <- lnTheta$linkinv(theta)
+        
+        if(any(beta <= 0L) || anyNA(beta) || any(is.infinite(beta)) || any(theta <= 0L) || anyNA(theta) || any(is.infinite(theta))){
+          return(1e20)
+        } else {
+          return(eval(nll))
+        }
+      }
+  
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
   list2env(as.list(envir(sim)), envir = envData)
@@ -137,22 +133,22 @@ fireSense_SizeFitRun <- function(sim) {
 
   ## Check formula for beta
   if (is.empty.model(p(sim)$formula$beta))
-    stop("fireSense_SizeFit> The specified formula (beta) is empty")
+    stop("fireSense_SizeFit> The formula (beta) describes an empty model.")
   
   ## Check formula for theta
   if (is.empty.model(p(sim)$formula$theta))
-    stop("fireSense_SizeFit> The specified formula (theta) is empty")
+    stop("fireSense_SizeFit> The formula (theta) describes an empty model.")
 
   termsBeta <- terms.formula(formulaBeta <- p(sim)$formula$beta)
   termsTheta <- terms.formula(formulaTheta <- p(sim)$formula$theta)
     
   if (attr(termsBeta, "response"))
-    y <- yBeta <- as.character(attr(termsBeta, "variables")[[2L]])
+    y <- yBeta <- as.character(formulaBeta[[2L]])
   else
     stop("fireSense_SizeFit> Incomplete formula (beta), the LHS is missing.")
   
   if (attr(termsTheta, "response"))
-    yTheta <- as.character(attr(termsTheta, "variables")[[2L]])
+    yTheta <- as.character(formulaTheta[[2L]])
   else
     stop("fireSense_SizeFit> Incomplete formula (theta), the LHS is missing.")
   
