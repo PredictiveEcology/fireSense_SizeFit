@@ -168,20 +168,18 @@ fireSense_SizeFitRun <- function(sim) {
     stop("fireSense_SizeFit> the response variables for beta and theta must be identical.")
     
   ## Coerce lnBeta to a link-glm object
-  if (is.character(p(sim)$link$b))
+  if (is.character(p(sim)$link$b)) {
     lnBeta <- make.link(p(sim)$link$b)
-  else if (is(p(sim)$link$b, "link-glm"))
+  } else if (is(p(sim)$link$b, "link-glm")) {
     ## Do nothing
-  else
-    lnBeta <- make.link(p(sim)$link$b) ## Try to coerce to link-glm class
+  } else lnBeta <- make.link(p(sim)$link$b) ## Try to coerce to link-glm class
 
   ## Coerce lnTheta to a link-glm object
-  if (is.character(p(sim)$link$t))
+  if (is.character(p(sim)$link$t)) {
     lnTheta <- make.link(p(sim)$link$t)
-  else if (is(p(sim)$link$t, "link-glm"))
+  } else if (is(p(sim)$link$t, "link-glm")) {
     ## Do nothing
-  else
-    lnTheta <- make.link(p(sim)$link$t)
+  } else lnTheta <- make.link(p(sim)$link$t)
 
   ## No tracing if trace < 0
   trace <- if(p(sim)$trace < 0) 0 else p(sim)$trace
