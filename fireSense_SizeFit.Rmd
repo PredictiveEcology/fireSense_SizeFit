@@ -5,6 +5,8 @@ date: "12 July 2016"
 output: pdf_document
 ---
 
+- provide example for partial matching for list(beta =, theta = )
+
 # Overview
 
 Provide an overview of what the module does / how to use the module.
