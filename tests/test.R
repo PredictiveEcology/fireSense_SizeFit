@@ -19,5 +19,5 @@ mySim <- simInit(
     stringsAsFactors = FALSE)
 )
 
-spades(mySim, debug = TRUE)
+spades(mySim)
 

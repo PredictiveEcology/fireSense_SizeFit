@@ -139,6 +139,25 @@ fireSense_SizeFitRun <- function(sim) {
         }
       }
   
+    ## Nlminb wrapper
+      objNlminb <- function(start, objective, lower, upper, control) {
+        
+        nlminb.call <- quote(nlminb(start = start, objective = objective, lower = lower, upper = upper, control = control))
+        nlminb.call[names(formals(objective)[-1L])] <- parse(text = formalArgs(objective)[-1L])
+        
+        o <- eval(nlminb.call)
+        
+        i <- 1L
+        
+        ## When there is no convergence and restart is possible, run nlminb() again
+        while(as.integer(gsub("[\\(\\)]", "", regmatches(o$message, gregexpr("\\(.*?\\)", o$message))[[1L]])) %in% 7:14 & i < 3L){
+          i <- i + 1L
+          o <- eval(nlminb.call)
+        }            
+        o
+      }  
+      
+      
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
   list2env(as.list(envir(sim)), envir = envData)
@@ -336,73 +355,40 @@ fireSense_SizeFitRun <- function(sim) {
     ## Use these estimates to compute the order of magnitude of these parameters
     #     opDE <- DEoptim::DEoptim(objfun,lower=DEoptimLB,upper=DEoptimUB, control = DEoptim::DEoptim.control(itermax = 500L, trace = trace))
 
-    JDE <- list(iter = 0L)
-    i <- 0L
-    while(JDE$iter == 0L && i < 30){
-      i <- i + 1L
-      JDE.call <- quote(JDEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, trace = if(trace > 0) TRUE else FALSE, triter = trace))
-      JDE.call[names(formals(objfun)[-1])] <- parse(text = formalArgs(objfun)[-1])
-      JDE <- suppressWarnings(eval(JDE.call))
-    }
-
-    ## Update scaling matrix
-    diag(scalMx) <- oom(JDE$par)
+      JDE <- list(iter = 0L)
+      i <- 0L
+      while(JDE$iter == 0L && i < 30){
+        i <- i + 1L
+        JDE.call <- quote(JDEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, trace = if(trace > 0) TRUE else FALSE, triter = trace, maxiter = 10))
+        JDE.call[names(formals(objfun)[-1])] <- parse(text = formalArgs(objfun)[-1])
+        JDE <- suppressWarnings(eval(JDE.call))
+      }
+  
+      ## Update scaling matrix
+      diag(scalMx) <- oom(JDE$par)
 
 
     ## Second optimization with nlminb()
     ## Brute-force to make models converge & select the best fit (according to AICc criterion)
-    svList <- c(lapply(1:500,function(i)pmin(pmax(rnorm(length(JDE$par),0L,2L)/10 + unname(JDE$par/oom(JDE$par)), nlminbLB), nlminbUB)),
-                list(unname(JDE$par/oom(JDE$par))))
+      svList <- c(lapply(1:500,function(i)pmin(pmax(rnorm(length(JDE$par),0L,2L)/10 + unname(JDE$par/oom(JDE$par)), nlminbLB), nlminbUB)),
+                  list(unname(JDE$par/oom(JDE$par))))
+      
+      out <- lapply(svList, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(p(sim)$nlminb.control, list(trace = trace)))
+      
+      ## Select best minimum amongst all trials
+      out <- out[[which.min(sapply(out, "[[", "objective"))]]
 
-    nlminb.call <- quote(nlminb(start=sv, objective = objfun, lower = nlminbLB, upper = nlminbUB,
-                                control=c(p(sim)$nlminb.control, list(trace = trace))))
-    nlminb.call[names(formals(objfun)[-1L])] <- parse(text = formalArgs(objfun)[-1L])
+  } else if (is.list(p(sim)$start)) { ## If starting values are supplied as a list of vectors of starting values
 
-    out <- lapply(svList, function(sv){
-      o <- eval(nlminb.call)
-
-      i <- 1L
-
-      ## When there is no convergence and restart is possible, run nlminb() again
-      while(as.integer(gsub("[\\(\\)]", "", regmatches(o$message, gregexpr("\\(.*?\\)", o$message))[[1L]])) %in% 7:14 & i < 3L){
-        i <- i + 1L
-        o <- eval(nlminb.call)
-      }
-      o
-    })
+    out <- lapply(p(sim)$start, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(p(sim)$nlminb.control, list(trace = trace)))
 
     ## Select best minimum amongst all trials
-    o <- out[[which.min(sapply(out,"[[","objective"))]]
+    out <- out[[which.min(sapply(out, "[[", "objective"))]]
+    
+  } else if (is.vector(p(sim)$start)) { ## If starting values are supplied as a vector of starting values
+      
+    out <- objNlminb(p(sim)$start, objfun, nlminbLB, nlminbUB, c(p(sim)$nlminb.control, list(trace = trace)))
 
-  } else if (is.list(p(sim)$start)) { ## If starting values are supplied
-
-    nlminb.call <- quote(nlminb(start=sv, objective = objfun, lower = nlminbLB, upper = nlminbUB,
-                                control=c(p(sim)$nlminb.control, list(trace = trace))))
-    nlminb.call[names(formals(objfun)[-1L])] <- parse(text = formalArgs(objfun)[-1L])
-
-    ## List of vectors of user-defined starting values
-    out <- lapply(p(sim)$start, function(sv) {
-      o <- eval(nlminb.call)
-
-      i <- 1L
-
-      ## When there is no convergence and restart is possible, run nlminb() again
-      while(as.integer(gsub("[\\(\\)]", "", regmatches(o$message, gregexpr("\\(.*?\\)", o$message))[[1L]])) %in% 7:14 & i < 3L) {
-        i <- i + 1L
-        o <- eval(nlminb.call)
-      }
-      o
-    })
-
-    ## Select best minimum amongst all trials
-    o <- out[[which.min(sapply(out,"[[","objective"))]]
-  } else if (is.vector(p(sim)$start)) { ## Vector of user-defined starting values
-
-    o <- nlminb(p(sim)$start,
-                 objective = objfun,
-                 lower = nlminbLB,
-                 upper = nlminbUB,
-                 control = p(sim)$nlminb.control)
   }
 
   ## Compute the standard errors around the estimates
