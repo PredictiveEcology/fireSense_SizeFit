@@ -2,9 +2,9 @@
 # are put into the simList. To use objects and functions, use sim$xxx.
 defineModule(sim, list(
   name = "fireSense_SizeFit",
-  description = "Fit statistical models describing the empirical distribution of fire sizes.",
+  description = "Fit statistical models describing the empirical distribution of fire sizes. A tapered Pareto distribution is assumed.",
   keywords = c("fire size distribution", "tapered Pareto", "optimization", "fireSense", "statistical model"),
-  authors=c(person("Jean", "Marchal", email="jean.d.marchal@gmail.com", role=c("aut", "cre"))),
+  authors=c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
   version = numeric_version("1.2.0.9000"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
@@ -15,30 +15,48 @@ defineModule(sim, list(
   reqdPkgs = list("DEoptimR", "magrittr", "numDeriv", "PtProcess"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", default, min, max, "parameter description")),
-    defineParameter("formula", "list", NULL, desc = 'a (named) list with two components called "beta" and "theta" of class "formula" : a symbolic description of the model to be fitted (beta and theta parameters of the tapered Pareto).'),
-    defineParameter("a", "numeric", NULL, desc = 'range parameter a of the tapered Pareto. The random variable x take values on the interval a <= x < Inf. Values outside of this range are removed with a warning.'),
-    defineParameter("link", "list", list(beta = "log", theta = "identity"), desc = 'a (named) list of two link functions for the beta parameter of the tapered Pareto. see ?family. It should contain two components named "beta" and "theta".'),
-    defineParameter(name = "start", class = "numeric", default = NULL,
-                    desc = 'optional (named) list of starting values for the parameters to be estimated. Should contain two components named "beta" and "theta".'),
-    defineParameter(name = "lb", class = "numeric", default = NULL, desc = 'optional lower bounds for the parameters to be estimated. Should contain two components named "beta" and "theta".'),
-    defineParameter(name = "ub", class = "numeric", default = NULL, desc = 'optional upper bounds for the parameters to be estimated. Should contain two components named "beta" and "theta".'),
-    defineParameter(name = "nlminb.control", class = "numeric", default = list(iter.max = 5000L, eval.max=5000L),
-                    desc = "optional list of control parameters to be passed to the nlminb optmizer. See ?nlminb"),
+    defineParameter("formula", "list", NULL, 
+      desc = 'a (named) list with two components called "beta" and "theta" of class "formula" :
+              a symbolic description of the model to be fitted (beta and theta being parameters
+              of the tapered Pareto distribution).'),
+    defineParameter("a", "numeric", NULL, 
+      desc = 'range parameter a of the tapered Pareto. The random variable x take values on the
+              interval a <= x < Inf. Values outside of this range are ignored with a warning.'),
+    defineParameter("link", "list", list(beta = "log", theta = "identity"), 
+      desc = 'a (named) list with two components called "beta" and "theta" specifying model 
+              links for the "beta" and "theta" parameters of the tapered Pareto. These can be 
+              character strings or objects of class "link-glm". For more info see ?family.'),
+    defineParameter(name = "start", class = "list", default = NULL,
+      desc = 'optional (named) list with two components called "beta" and "theta" specifying 
+              starting values for the parameters to be estimated. Those are passed to nlminb
+              and can be numeric vectors, or lists of numeric vectors.'),
+    defineParameter(name = "lb", class = "numeric", default = NULL,
+      desc = 'optional (named) list with two components called "beta" and "theta" specifying
+              lower bounds for the parameters to be estimated. These should be numeric values.'),
+    defineParameter(name = "ub", class = "numeric", default = NULL, 
+      desc = 'optional (named) list with two components called "beta" and "theta" specifying
+              upper bounds for the parameters to be estimated. These should be numeric values.'),
+    defineParameter(name = "nlminb.control", class = "numeric", default = list(iter.max = 5e3L, eval.max = 5e3L),
+      desc = "optional list of control parameters to be passed to the nlminb optmizer. See ?nlminb"),
     defineParameter(name = "trace", class = "numeric", default = 0,
-                    desc = "non-negative integer. If > 0, tracing information on the progress of the optimization is produced every trace iteration. Defaults to 0 which indicates no trace information is to be printed."),
+      desc = "non-negative integer. If > 0, tracing information on the progress of the 
+              optimization is produced every trace iteration. Defaults to 0 which indicates no
+              trace information should be printed."),
     defineParameter(name = "data", class = "character", default = NULL,
-      desc = "optional. A character vector indicating the names of objects present in the sim environment, in which
-              to look for variables with which to predict. Objects can be data.frames. If omitted, or if variables
-              are not found in data objects, variables are searched in the sim environment."),
+      desc = "optional. A character vector indicating the names of objects present in the 
+              simList environment, in which to look for variables with which to predict. Objects
+              should be data.frames. If omitted, or if variables are not found in data objects,
+              variables are searched in the simList environment."),
     defineParameter(name = "initialRunTime", class = "numeric", default = NA,
       desc = "optional. Simulation time at which to start this module. If omitted, start at start(simList)."),
-    defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")
+    defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
+      desc = "optional. Interval in simulation time units between two runs of this module.")
   ),
-  inputObjects = data.frame(objectName="dataFireSense_SizeFit",
-                            objectClass="data.frame",
-                            sourceURL="",
-                            other=NA_character_,
-                            stringsAsFactors=FALSE),
+  inputObjects = data.frame(objectName = "dataFireSense_SizeFit",
+                            objectClass = "data.frame",
+                            sourceURL = "",
+                            other = NA_character_,
+                            stringsAsFactors = FALSE),
   outputObjects = data.frame(
     objectName = "fireSense_SizeFit",
     objectClass = "fireSense_SizeFit",
@@ -187,7 +205,7 @@ fireSense_SizeFitRun <- function(sim) {
   } else if (any(rm)) {
     
     lapply(unique(c(all.vars(termsBeta), all.vars(termsTheta))), function(x) assign(x = x, value = envData[[x]][!rm], envir = envData))
-    warning(paste("fireSense_SizeFit> Removed", sum(rm), "rows containing values outside of the range a <= x < Inf."), immediate. = TRUE)
+    warning(paste("fireSense_SizeFit> Ignored", sum(rm), "rows containing values outside of the range a <= x < Inf."), immediate. = TRUE)
     
   }
 
