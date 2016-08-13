@@ -117,7 +117,7 @@ fireSense_SizeFitRun <- function(sim) {
       oom <- function(x) 10 ^ (ceiling(log10(abs(x))))
     
     ## Function to pass to the optimizer
-      objfun <- function(params, scalMx, mmBeta, mmTheta, nBeta, n, lnBeta, lnTheta, y, envData){
+      objfun <- function(params, scalMx, mmBeta, mmTheta, nBeta, n, linkfunBeta, linkfunTheta, y, envData) {
         
         ## Parameters scaling
         params <- drop(params %*% scalMx)
@@ -129,14 +129,12 @@ fireSense_SizeFitRun <- function(sim) {
         if(length(theta) == 1L) theta <- rep_len(theta, length(beta)) ## Recycled if needed
         
         ## link implementation
-        beta <- lnBeta$linkinv(beta)
-        theta <- lnTheta$linkinv(theta)
+        beta <- linkfunBeta(beta)
+        theta <- linkfunTheta(theta)
         
-        if(any(beta <= 0L) || anyNA(beta) || any(is.infinite(beta)) || any(theta <= 0L) || anyNA(theta) || any(is.infinite(theta))){
-          return(1e20)
-        } else {
-          return(eval(nll))
-        }
+        if(any(beta <= 0L) || anyNA(beta) || any(is.infinite(beta)) || any(theta <= 0L) || anyNA(theta) || any(is.infinite(theta))) return(1e20)
+        else return(eval(nll))
+
       }
   
     ## Nlminb wrapper
@@ -145,6 +143,7 @@ fireSense_SizeFitRun <- function(sim) {
         nlminb.call <- quote(nlminb(start = start, objective = objective, lower = lower, upper = upper, control = control))
         nlminb.call[names(formals(objective)[-1L])] <- parse(text = formalArgs(objective)[-1L])
         
+        op <- options(warn = -1)
         o <- eval(nlminb.call)
         
         i <- 1L
@@ -153,8 +152,11 @@ fireSense_SizeFitRun <- function(sim) {
         while(as.integer(gsub("[\\(\\)]", "", regmatches(o$message, gregexpr("\\(.*?\\)", o$message))[[1L]])) %in% 7:14 & i < 3L){
           i <- i + 1L
           o <- eval(nlminb.call)
-        }            
+        }
+        
+        options(op)
         o
+        
       }  
       
       
@@ -200,6 +202,9 @@ fireSense_SizeFitRun <- function(sim) {
     ## Do nothing
   } else lnTheta <- make.link(p(sim)$link$t)
 
+  linkfunBeta <- lnBeta$linkfun
+  linkfunTheta <- lnTheta$linkfun
+  
   ## No tracing if trace < 0
   trace <- if(p(sim)$trace < 0) 0 else p(sim)$trace
 
@@ -232,80 +237,67 @@ fireSense_SizeFitRun <- function(sim) {
 
   ## Define parameter bounds automatically if they are not supplied by user
   ## First defined the bounds for DEoptim, the first optimizer
+    DEoptimUB <- c(
+      if (is.null(p(sim)$ub$b)) {
+        
+        ## Automatically estimate an upper boundary for each parameter
+        (glm(formulaBeta, ## family gaussian link 
+             family = gaussian(link = lnBeta$name),
+             y = FALSE,
+             model = FALSE,
+             data = envData) %>%
+           coef %>%
+           abs) * 1.1
+        
+      } else rep_len(p(sim)$ub$b, nBeta), ## User-defined bounds (recycled if necessary)
+      
+      if (is.null(p(sim)$ub$t)) {
+        
+        ## Automatically estimate an upper boundary for each parameter
+        (glm(formulaTheta,
+             family = gaussian(link = lnTheta$name),
+             y = FALSE,
+             model = FALSE,
+             data = envData) %>%
+           coef %>%
+           abs) * 1.1
+      } else rep_len(p(sim)$ub$t, nTheta) ## User-defined bounds (recycled if necessary)
+    )
+  
     ## Beta
       switch(lnBeta$name,
              log = {
-               DEoptimUB <-
-                 if (is.null(p(sim)$ub$b)) {
-                   ## Automatically estimate an upper boundary for each parameter
-                   (lm(update(formulaBeta, log(.) ~ .),
-                       y = FALSE,
-                       model = FALSE,
-                       data = envData) %>%
-                      coef %>%
-                      abs) * 1.1
-                 } else rep_len(p(sim)$ub$b, nBeta) ## User-defined bounds (recycled if necessary)
 
                DEoptimLB <-
                  if (is.null(p(sim)$lb$b)) -DEoptimUB ## Automatically estimate a lower boundary for each parameter
                  else rep_len(p(sim)$lb$b, nBeta) ## User-defined bounds (recycled if necessary)
+               
              }, identity = {
-               DEoptimUB <-
-                 if (is.null(p(sim)$ub$b)) {
-                   ## Automatically estimate an upper boundary for each parameter
-                   (lm(formulaBeta,
-                       y = FALSE,
-                       model = FALSE,
-                       data = envData) %>%
-                      coef %>%
-                      abs) * 1.1
-                 } else rep_len(p(sim)$ub$b, nBeta) ## User-defined bounds (recycled if necessary)
-
+               
                DEoptimLB <-
                  if (is.null(p(sim)$lb$b)) rep_len(1e-30, nBeta) ## Enforce non-negativity (reecycled if necessary)
                  else rep_len(p(sim)$lb$b, nBeta) ## User-defined bounds (recycled if necessary)
+               
              }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$b, "(beta) is not supported.")))
 
   ## Theta
     switch(lnTheta$name,
            log = {
-             DEoptimUB <- 
-               c(DEoptimUB,
-                 if (is.null(p(sim)$ub$t)) {
-                   ## Automatically estimate an upper boundary for each parameter
-                   (lm(update(formulaTheta, log(.) ~ .),
-                       y = FALSE,
-                       model = FALSE,
-                       data = envData) %>%
-                      coef %>%
-                      abs) * 1.1
-                 } else rep_len(p(sim)$ub$t, nTheta)
-               ) ## User-defined bounds (recycled if necessary)
-  
+
              DEoptimLB <-
                c(DEoptimLB,
                  if (is.null(p(sim)$lb$t)) -DEoptimUB[(nBeta + 1L):n] ## Automatically estimate a lower boundary for each parameter
                  else rep_len(p(sim)$lb$t, nTheta) ## User-defined bounds (recycled if necessary)
                )
+             
            }, identity = {
-             DEoptimUB <-
-               c(DEoptimUB,
-                 if (is.null(p(sim)$ub$t)) {
-                   ## Automatically estimate an upper boundary for each parameter
-                   (lm(formulaTheta,
-                       y = FALSE,
-                       model = FALSE,
-                       data = envData) %>%
-                      coef %>%
-                      abs) * 1.1
-                 } else rep_len(p(sim)$ub$t, nTheta) ## User-defined bounds (recycled if necessary)
-               )
-  
+             
              DEoptimLB <- 
                c(DEoptimLB,
                  if (is.null(p(sim)$lb$t)) rep_len(1e-30, nTheta) ## Enforce non-negativity (recycled if necessary)
                  else rep_len(p(sim)$lb$t, nTheta) ## User-defined bounds (recycled if necessary)
                )
+             
            }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$t, "(theta) is not supported.")))
 
   ## Then, define lower and upper bounds for the second optimizer (nlminb)
@@ -326,6 +318,7 @@ fireSense_SizeFitRun <- function(sim) {
   
     ## Theta
       nlminbUB <- c(nlminbUB,
+                    
         if (is.null(p(sim)$ub$t)) rep_len(Inf, nTheta)
         else DEoptimUB[(nBeta + 1L):n] ## User-defined bounds
       )
@@ -356,7 +349,9 @@ fireSense_SizeFitRun <- function(sim) {
         i <- i + 1L
         JDE.call <- quote(JDEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, trace = if(trace > 0) TRUE else FALSE, triter = trace, maxiter = 10))
         JDE.call[names(formals(objfun)[-1])] <- parse(text = formalArgs(objfun)[-1])
-        JDE <- suppressWarnings(eval(JDE.call))
+        op <- options(warn = -1)
+        JDE <- eval(JDE.call)
+        options(warn = -1)
       }
   
       ## Update scaling matrix
@@ -393,7 +388,7 @@ fireSense_SizeFitRun <- function(sim) {
   se <- try(drop(sqrt(diag(solve(hess))) %*% scalMx), silent = TRUE)
 
   ## Negative values in the Hessian matrix suggest that the algorithm did not converge
-  if(anyNA(se)) warning("fireSense_SizeFit> nlminb: algorithm did not converge", noBreaks. = TRUE)
+  if(anyNA(se)) warning("fireSense_SizeFit> nlminb: algorithm did not converge", immediate. = TRUE)
 
   ## Parameters scaling: Revert back estimated coefficients to their original scale
   o$par <- drop(o$par %*% scalMx)
