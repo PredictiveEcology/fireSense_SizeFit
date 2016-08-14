@@ -269,14 +269,14 @@ fireSense_SizeFitRun <- function(sim) {
              log = {
 
                DEoptimLB <-
-                 if (is.null(p(sim)$lb$b)) -DEoptimUB ## Automatically estimate a lower boundary for each parameter
-                 else rep_len(p(sim)$lb$b, nBeta) ## User-defined bounds (recycled if necessary)
+                 if (is.null(p(sim)$lb$b)) ifelse(sign(DEoptimUB[1:nB]) == 1, -DEoptimUB[1:nB], DEoptimUB[1:nB] * 3) ## Automatically estimate a lower boundary for each parameter
+                 else rep_len(p(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
              }, identity = {
                
                DEoptimLB <-
-                 if (is.null(p(sim)$lb$b)) rep_len(1e-30, nBeta) ## Enforce non-negativity (reecycled if necessary)
-                 else rep_len(p(sim)$lb$b, nBeta) ## User-defined bounds (recycled if necessary)
+                 if (is.null(p(sim)$lb$b)) rep_len(1e-16, nB) * sign(DEoptimUB) ## Enforce non-negativity (reecycled if necessary)
+                 else rep_len(p(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
              }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$b, "(beta) is not supported.")))
 
@@ -286,16 +286,16 @@ fireSense_SizeFitRun <- function(sim) {
 
              DEoptimLB <-
                c(DEoptimLB,
-                 if (is.null(p(sim)$lb$t)) -DEoptimUB[(nBeta + 1L):n] ## Automatically estimate a lower boundary for each parameter
-                 else rep_len(p(sim)$lb$t, nTheta) ## User-defined bounds (recycled if necessary)
+                 if (is.null(p(sim)$lb$t)) ifelse(sign(DEoptimUB[(nB + 1L):n]) == 1, -DEoptimUB[(nB + 1L):n], DEoptimUB[(nB + 1L):n] * 3) ## Automatically estimate a lower boundary for each parameter
+                 else rep_len(p(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
                )
              
            }, identity = {
              
              DEoptimLB <- 
                c(DEoptimLB,
-                 if (is.null(p(sim)$lb$t)) rep_len(1e-30, nTheta) ## Enforce non-negativity (recycled if necessary)
-                 else rep_len(p(sim)$lb$t, nTheta) ## User-defined bounds (recycled if necessary)
+                 if (is.null(p(sim)$lb$t)) rep_len(1e-16, nT) ## Enforce non-negativity (recycled if necessary)
+                 else rep_len(p(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
                )
              
            }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$t, "(theta) is not supported.")))
