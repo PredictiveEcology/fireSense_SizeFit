@@ -388,7 +388,7 @@ fireSense_SizeFitRun <- function(sim) {
   se <- try(drop(sqrt(diag(solve(hess))) %*% scalMx), silent = TRUE)
 
   ## Negative values in the Hessian matrix suggest that the algorithm did not converge
-  if(anyNA(se)) warning("fireSense_SizeFit> nlminb: algorithm did not converge", immediate. = TRUE)
+  if(anyNA(se) || out$convergence) warning("fireSense_SizeFit> nlminb: algorithm did not converge", immediate. = TRUE)
 
   ## Parameters scaling: Revert back estimated coefficients to their original scale
   o$par <- drop(o$par %*% scalMx)
