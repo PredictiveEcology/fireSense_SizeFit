@@ -16,28 +16,28 @@ defineModule(sim, list(
   parameters = rbind(
     #defineParameter("paramName", "paramClass", default, min, max, "parameter description")),
     defineParameter("formula", "list", NULL, 
-      desc = 'a (named) list with two components called "beta" and "theta" of class "formula" :
+      desc = 'a named list with two components called "beta" and "theta" of class "formula" :
               a symbolic description of the model to be fitted (beta and theta being parameters
               of the tapered Pareto distribution).'),
     defineParameter("a", "numeric", NULL, 
       desc = 'range parameter a of the tapered Pareto. The random variable x take values on the
               interval a <= x < Inf. Values outside of this range are ignored with a warning.'),
     defineParameter("link", "list", list(beta = "log", theta = "identity"), 
-      desc = 'a (named) list with two components called "beta" and "theta" specifying model 
+      desc = 'a named list with two components called "beta" and "theta" specifying model 
               links for the "beta" and "theta" parameters of the tapered Pareto. These can be 
               character strings or objects of class "link-glm". For more info see ?family.'),
     defineParameter(name = "start", class = "list", default = NULL,
-      desc = 'optional (named) list with two components called "beta" and "theta" specifying 
+      desc = 'optional. Named list with two components called "beta" and "theta" specifying 
               starting values for the parameters to be estimated. Those are passed to nlminb
               and can be numeric vectors, or lists of numeric vectors.'),
     defineParameter(name = "lb", class = "numeric", default = NULL,
-      desc = 'optional (named) list with two components called "beta" and "theta" specifying
+      desc = 'optional. Named list with two components called "beta" and "theta" specifying
               lower bounds for the parameters to be estimated. These should be numeric values.'),
     defineParameter(name = "ub", class = "numeric", default = NULL, 
-      desc = 'optional (named) list with two components called "beta" and "theta" specifying
+      desc = 'optional. Named list with two components called "beta" and "theta" specifying
               upper bounds for the parameters to be estimated. These should be numeric values.'),
     defineParameter(name = "nlminb.control", class = "numeric", default = list(iter.max = 5e3L, eval.max = 5e3L),
-      desc = "optional list of control parameters to be passed to the nlminb optmizer. See ?nlminb"),
+      desc = "optional. List of control parameters to be passed to the nlminb optmizer. See ?nlminb"),
     defineParameter(name = "trace", class = "numeric", default = 0,
       desc = "non-negative integer. If > 0, tracing information on the progress of the 
               optimization is produced every trace iteration. Defaults to 0 which indicates no
@@ -186,7 +186,7 @@ fireSense_SizeFitRun <- function(sim) {
   else stop("fireSense_SizeFit> Incomplete formula (theta), the LHS is missing.")
   
   if (!identical(yBeta, yTheta))
-    stop("fireSense_SizeFit> the response variables for beta and theta must be identical.")
+    stop("fireSense_SizeFit> The response variables for beta and theta must be identical.")
     
   ## Coerce lnB to a link-glm object
   if (is.character(p(sim)$link$b)) {
@@ -411,7 +411,7 @@ fireSense_SizeFitRun <- function(sim) {
 }
 
 ### template for save events
-fireSense_FrequencyPredictSave <- function(sim) {
+fireSense_SizeFitSave <- function(sim) {
   # ! ----- EDIT BELOW ----- ! #
   # do stuff for this event
   sim <- saveFiles(sim)
