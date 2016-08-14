@@ -347,7 +347,7 @@ fireSense_SizeFitRun <- function(sim) {
       i <- 0L
       while(JDE$iter == 0L && i < 30){
         i <- i + 1L
-        JDE.call <- quote(JDEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, trace = if(trace > 0) TRUE else FALSE, triter = trace, maxiter = 10))
+        JDE.call <- quote(JDEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, trace = if(trace > 0) TRUE else FALSE, triter = trace))
         JDE.call[names(formals(objfun)[-1])] <- parse(text = formalArgs(objfun)[-1])
         op <- options(warn = -1)
         JDE <- eval(JDE.call)
