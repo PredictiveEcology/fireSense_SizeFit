@@ -26,8 +26,8 @@ library(SpaDES)
   #   modules = list("fireSense_SizeFit"),
   #   paths = list(modulePath = " # replace with empty string instead"),
   #   params = list(fireSense_SizeFit = list(
-  #     formula = list(beta = formula(SUP_HA ~ MDC_JUN + HW + DIST + O + WATER),
-  #                    theta = formula(SUP_HA ~ MDC_MJ + HW + DIST + O + WATER)),
+  #     formula = list(beta = formula(SUP_HA ~ MDC_JUN + HW + D + O + WATER),
+  #                    theta = formula(SUP_HA ~ MDC_MJ + HW + D + O + WATER)),
   #     a = 1,
   #     trace = 5,
   #     data = "dataFireSense_SizeFit"
