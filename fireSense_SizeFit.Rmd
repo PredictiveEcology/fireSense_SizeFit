@@ -1,52 +1,59 @@
 ---
-title: "fireSense_Size"
-author: "Module Author"
-date: "12 July 2016"
-output: pdf_document
+title: "fireSense_SizeFit"
+author: "Jean Marchal"
+date: "August 2016"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
-- provide example for partial matching for list(beta =, theta = )
-
 # Overview
+Fit statistical models of the fire size distribution. A tapered Pareto distribution
+is assumed. This distribution has three parameters: *a*, $\beta$ and $\theta$; *a* is
+the lower truncation point and is assumed to be known *a* priori, $\beta$ controls the
+rate of frequency decrease as fire size increases, finally $\theta$ governs the location of
+the exponential taper. This module can be used to relate $\beta$ and $\theta$ with
+environmental controls of the fire size distribution.
 
-Provide an overview of what the module does / how to use the module.
-
-Module documentation should be written so that others can use your module.
-This is a template for module documentation, and should be changed to reflect your module.
-
-## RMarkdown
-
-RMarkdown syntax allows R code, outputs, and figures to be rendered in the documentation.
-
-For help writing in RMarkdown, see http://rmarkdown.rstudio.com/.
 
 # Usage
 
-```{r module_usage}
+```{r module_usage, eval = FALSE}
 library(SpaDES)
+library(DEoptimR)
 library(magrittr)
+library(numDeriv)
+library(PtProcess)
 
-inputDir <- file.path(tempdir(), "inputs") %>% checkPath(create = TRUE)
-outputDir <- file.path(tempdir(), "outputs")
-times <- list(start = 0, end = 10)
+set.seed(1)
+
+df <- data.frame(
+  weather = rnorm(1000, 150, 30),
+  fireFrequency = rpois(1000, .5)
+)
+
+#outputDir <- file.path(tempdir(), "outputs")
+times <- list(start = 1, end = 1)
 parameters <- list(
-  .globals = list(burnStats = "nPixelsBurned"),
-  #.progress = list(type = "text", interval = 1), # for a progress bar
-  ## If there are further modules, each can have its own set of parameters:
-  #module1 = list(param1 = value1, param2 = value2),
-  #module2 = list(param1 = value1, param2 = value2)
-)
-modules <- list("fireSense_Size")
-objects <- list()
-paths <- list(
-  cachePath = file.path(outputDir, "cache"),
-  modulePath = file.path(".."),
-  inputPath = inputDir,
-  outputPath = outputDir
+  fireSense_FrequencyFit = list(
+    formula = formula(fireFrequency ~ weather),
+    data = "df", ## TODO: where the data lives
+    trace = 5 # Print progress every trace iteration
+  )
 )
 
-mySim <- simInit(times = times, params = parameters, modules = modules,
-                 objects = objects, paths = paths)
+modules <- list("fireSense_SizeFit")
+objects <- "df"
+paths <- list(
+  # cachePath = file.path(outputDir, "cache"),
+  modulePath = file.path("~/Documents/GitHub/McIntire-lab/modulesPrivate/") ## TODO: change this to tempdir()
+  # inputPath = inputDir,
+  # outputPath = outputDir
+)
+
+## TODO: - provide example for partial matching for list(beta =, theta = )
+ 
+mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects, paths = paths)
 
 spades(mySim)
 ```
