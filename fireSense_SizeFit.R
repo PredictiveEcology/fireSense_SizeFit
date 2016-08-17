@@ -2,7 +2,12 @@
 # are put into the simList. To use objects and functions, use sim$xxx.
 defineModule(sim, list(
   name = "fireSense_SizeFit",
-  description = "Fit statistical models describing the empirical distribution of fire sizes. A tapered Pareto distribution is assumed.",
+  description = "Fit statistical models of the fire size distribution. A tapered Pareto distribution
+                 is assumed. This distribution has three parameters: a, beta and theta; a is the 
+                 lower truncation point and is assumed to be known a priori, beta controls the rate
+                 of frequency decrease as fire size increases, finally theta governs the location of
+                 the exponential taper. This module can be used to relate beta and theta with
+                 environmental controls of the fire size distribution.",
   keywords = c("fire size distribution", "tapered Pareto", "optimization", "fireSense", "statistical model"),
   authors=c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
