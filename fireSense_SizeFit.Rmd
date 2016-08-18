@@ -19,21 +19,21 @@ environmental controls of the fire size distribution.
 # Usage
 ## Module parameters
 Name|Default|Description
-----|--------------|---------------------------------------------------------------------|
-formula|NULL|a named list with two components called "beta" and "theta" of class "formula": a symbolic description of the model to be fitted (beta and theta being parameters of the tapered Pareto distribution.
+----|--------------|---------------------------------------------------------------------
+formula|NULL|a named list with two components called "beta" and "theta" of class "formula": a symbolic description of the model to be fitted.
 a|NULL|range parameter a of the tapered Pareto. The random variable $x$ take values on the interval $a <= x < Inf$. Values outside of this range are ignored with a warning.
 link|list(beta = "log", theta = "identity")|a named list with two components called "beta" and "theta" specifying model links for the "beta" and "theta" parameters of the tapered Pareto. These can be character strings or objects of class "link-glm". For more additional details see help("family").
-start|NULL|optional. Named list with two components called "beta" and "theta" specifying starting values for the parameters to be estimated. Those are passed to nlminb and can be numeric vectors, or lists of numeric vectors.
-lb|NULL|optional. Named list with two components called "beta" and "theta" specifying lower bounds for the parameters to be estimated. These should be numeric values.
-ub|NULL|optional. Named list with two components called "beta" and "theta" specifying upper bounds for the parameters to be estimated. These should be numeric values.
-nlminb.control|list(iter.max = 5e3L, eval.max = 5e3L)|optional. List of control parameters to be passed to the nlminb optmizer. See help("nlminb").
+start|NULL|optional. Named list with two components called "beta" and "theta" specifying starting values for the coefficients to be estimated. Those are passed to nlminb and can be numeric vectors, or lists of numeric vectors.
+lb|NULL|optional. Named list with two components called "beta" and "theta" specifying numeric vectors of lower bounds for the coefficients to be optimized over. These must be finite and will be recycled if necessary to match length(coefficients).
+ub|NULL|optional. Named list with two components called "beta" and "theta" specifying numeric vectors of upper bounds for the coefficients to be optimized over. These must be finite and will be recycled if necessary to match length(coefficients).
+nlminb.control|list(iter.max = 5e3L, eval.max = 5e3L)|optional. List of control parameters to be passed to the nlminb optimizer. See help("nlminb").
 trace|0|non-negative integer. If > 0, tracing information on the progress of theoptimization is produced every trace iteration. Defaults to 0 which indicates no trace information should be printed.
-data|NULL|optional. A character vector indicating the names of objects present in the simList environment, in which to look for variables present in the model formula. Objects should be data.frames. If omitted, or if variables are not found in data objects, variables are searched in the simList environment.
+data|NULL|optional. A character vector indicating the names of objects in the simList environment in which to look for variables in the model. Data objects should be data.frames. If omitted, or if variables are not found in data objects, variables are searched in the simList environment.
 initialRunTime|start(sim)|optional. Simulation time at which to start this module. Defaults to simulation start time."
 intervalRunModule|NA|optional. Interval in simulation time units between two runs of this module.
 |||
 
-## Example
+## Usage example
 ```{r module_usage_example, eval = FALSE}
 library(SpaDES)
 library(DEoptimR)
@@ -54,9 +54,9 @@ parameters <- list(
   fireSense_FrequencyFit = list(
     formula = list(beta = size_ha ~ weather,
                    theta = size_ha ~ weather),
-    a = 1, # Lower truncation point, here only fire with a size >= 1 ha are considered
-    data = "df", ## TODO: where the data lives
-    trace = 5 # Print progress every trace iteration
+    a = 1,
+    data = "df",
+    trace = 5 # Print progress every 5 iterations
   )
 )
 
