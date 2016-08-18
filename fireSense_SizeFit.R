@@ -122,10 +122,10 @@ fireSense_SizeFitRun <- function(sim) {
       oom <- function(x) 10 ^ (ceiling(log10(abs(x))))
     
     ## Function to pass to the optimizer
-      objfun <- function(params, scalMx, mmB, mmT, nB, n, linkfunB, linkfunT, y, envData) {
+      objfun <- function(params, sm, mmB, mmT, nB, n, linkfunB, linkfunT, y, envData) {
         
         ## Parameters scaling
-        params <- drop(params %*% scalMx)
+        params <- drop(params %*% sm)
         
         beta <- drop(mmB %*% params[1:nB])
         theta <- drop(mmT %*% params[(nB + 1L):n])
@@ -233,8 +233,8 @@ fireSense_SizeFitRun <- function(sim) {
 
   ## Define the scaling matrices. This is used later in the optimization process
   ## to rescale parameter values between 0 and 1, i.e. put all variables on the same scale.
-  scalMx <- matrix(0, n, n)
-  diag(scalMx) <- 1
+  sm <- matrix(0, n, n)
+  diag(sm) <- 1
 
   ## Design matrices
   mmB <- model.matrix(termsBeta, envData)
@@ -360,7 +360,7 @@ fireSense_SizeFitRun <- function(sim) {
       }
   
       ## Update scaling matrix
-      diag(scalMx) <- oom(JDE$par)
+      diag(sm) <- oom(JDE$par)
 
 
     ## Second optimization with nlminb()
@@ -390,13 +390,13 @@ fireSense_SizeFitRun <- function(sim) {
   hess.call <- quote(numDeriv::hessian(func = objfun, x = out$par))
   hess.call[names(formals(objfun)[-1L])] <- parse(text = formalArgs(objfun)[-1L])
   hess <- eval(hess.call)
-  se <- try(drop(sqrt(diag(solve(hess))) %*% scalMx), silent = TRUE)
+  se <- try(drop(sqrt(diag(solve(hess))) %*% sm), silent = TRUE)
 
   ## Negative values in the Hessian matrix suggest that the algorithm did not converge
   if(anyNA(se) || out$convergence) warning("fireSense_SizeFit> nlminb: algorithm did not converge", immediate. = TRUE)
 
   ## Parameters scaling: Revert back estimated coefficients to their original scale
-  out$par <- drop(out$par %*% scalMx)
+  out$par <- drop(out$par %*% sm)
 
   sim$fireSense_SizeFitted <- 
     list(formula = p(sim)$formula,
