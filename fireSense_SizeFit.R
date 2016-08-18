@@ -270,40 +270,34 @@ fireSense_SizeFitRun <- function(sim) {
     )
 
     ## Beta
+    DEoptimLB <- 
       switch(lnB$name,
              log = {
-
-               DEoptimLB <-
+               
                  if (is.null(p(sim)$lb$b)) ifelse(sign(DEoptimUB[1:nB]) == 1, -DEoptimUB[1:nB], DEoptimUB[1:nB] * 3) ## Automatically estimate a lower boundary for each parameter
                  else rep_len(p(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
              }, identity = {
                
-               DEoptimLB <-
                  if (is.null(p(sim)$lb$b)) rep_len(1e-16, nB) * sign(DEoptimUB) ## Enforce non-negativity (reecycled if necessary)
                  else rep_len(p(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
              }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$b, "(beta) is not supported.")))
 
   ## Theta
-    switch(lnT$name,
+    DEoptimLB <- c(DEoptimLB,
+      switch(lnT$name,
            log = {
-
-             DEoptimLB <-
-               c(DEoptimLB,
-                 if (is.null(p(sim)$lb$t)) ifelse(sign(DEoptimUB[(nB + 1L):n]) == 1, -DEoptimUB[(nB + 1L):n], DEoptimUB[(nB + 1L):n] * 3) ## Automatically estimate a lower boundary for each parameter
-                 else rep_len(p(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
-               )
              
+             if (is.null(p(sim)$lb$t)) ifelse(sign(DEoptimUB[(nB + 1L):n]) == 1, -DEoptimUB[(nB + 1L):n], DEoptimUB[(nB + 1L):n] * 3) ## Automatically estimate a lower boundary for each parameter
+             else rep_len(p(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
            }, identity = {
              
-             DEoptimLB <- 
-               c(DEoptimLB,
-                 if (is.null(p(sim)$lb$t)) rep_len(1e-16, nT) ## Enforce non-negativity (recycled if necessary)
-                 else rep_len(p(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
-               )
+             if (is.null(p(sim)$lb$t)) rep_len(1e-16, nT) ## Enforce non-negativity (recycled if necessary)
+             else rep_len(p(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
              
            }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$t, "(theta) is not supported.")))
+    )
 
   ## Then, define lower and upper bounds for the second optimizer (nlminb)
     ## Beta
@@ -326,6 +320,7 @@ fireSense_SizeFitRun <- function(sim) {
                     
         if (is.null(p(sim)$ub$t)) rep_len(Inf, nT)
         else DEoptimUB[(nB + 1L):n] ## User-defined bounds
+        
       )
     
       nlminbLB <- c(nlminbLB,
@@ -362,30 +357,36 @@ fireSense_SizeFitRun <- function(sim) {
       ## Update scaling matrix
       diag(sm) <- oom(JDE$par)
 
-
-    ## Second optimization with nlminb()
-    ## Brute-force to make models converge & select the best fit (according to AICc criterion)
-      svList <- c(lapply(1:500,function(i)pmin(pmax(rnorm(length(JDE$par),0L,2L)/10 + unname(JDE$par/oom(JDE$par)), nlminbLB), nlminbUB)),
+      start <- c(lapply(1:500,function(i)pmin(pmax(rnorm(length(JDE$par),0L,2L)/10 + unname(JDE$par/oom(JDE$par)), nlminbLB), nlminbUB)),
                   list(unname(JDE$par/oom(JDE$par))))
       
-      out <- lapply(svList, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(p(sim)$nlminb.control, list(trace = trace)))
-      
-      ## Select best minimum amongst all trials
-      out <- out[[which.min(sapply(out, "[[", "objective"))]]
-
-  } else if (is.list(p(sim)$start)) { ## If starting values are supplied as a list of vectors of starting values
-
-    out <- lapply(p(sim)$start, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(p(sim)$nlminb.control, list(trace = trace)))
-
-    ## Select best minimum amongst all trials
-    out <- out[[which.min(sapply(out, "[[", "objective"))]]
+  } else {
     
-  } else if (is.vector(p(sim)$start)) { ## If starting values are supplied as a vector of starting values
+    start <- if (is.list(p(sim)$start)) {
       
-    out <- objNlminb(p(sim)$start, objfun, nlminbLB, nlminbUB, c(p(sim)$nlminb.control, list(trace = trace)))
-
+      diag(sm) <- lapply(p(sim)$start, oom) %>%
+        do.call("rbind", .) %>%
+        apply(2, function(x) as.numeric(names(which.max(table(x)))))
+      
+      lapply(p(sim)$start, function(x) x / diag(sm))
+      
+    } else {
+      
+      diag(sm) <- oom(p(sim)$start)
+      p(sim)$start / diag(sm)
+      
+    }
   }
-
+  
+  out <- if (is.list(start)) {
+    
+    out <- lapply(start, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(p(sim)$nlminb.control, list(trace = trace)))
+    
+    ## Select best minimum amongst all trials
+    out[[which.min(sapply(out, "[[", "objective"))]]
+    
+  } else objNlminb(start, objfun, nlminbLB, nlminbUB, c(p(sim)$nlminb.control, list(trace = trace)))
+  
   ## Compute the standard errors around the estimates
   hess.call <- quote(numDeriv::hessian(func = objfun, x = out$par))
   hess.call[names(formals(objfun)[-1L])] <- parse(text = formalArgs(objfun)[-1L])
