@@ -2,12 +2,14 @@
 # are put into the simList. To use objects and functions, use sim$xxx.
 defineModule(sim, list(
   name = "fireSense_SizeFit",
-  description = "Fit statistical models of the fire size distribution. A tapered Pareto distribution
-                 is assumed. This distribution has three parameters: a, beta and theta; a is the 
-                 lower truncation point and is assumed to be known a priori, beta controls the rate
-                 of frequency decrease as fire size increases, finally theta governs the location of
-                 the exponential taper. This module can be used to relate beta and theta with
-                 environmental controls of the fire size distribution.",
+  description = "Fit statistical models of the fire size distribution. A tapered
+                 Pareto distribution is assumed. This distribution has three
+                 parameters: a, beta and theta; a is the lower truncation point 
+                 and is assumed to be known a priori, beta controls the rate of
+                 frequency decrease as fire size increases, finally theta governs
+                 the location of the exponential taper. This module can be used
+                 to relate beta and theta with environmental controls of the fire
+                 size distribution.",
   keywords = c("fire size distribution", "tapered Pareto", "optimization", "fireSense", "statistical model"),
   authors=c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
@@ -21,41 +23,52 @@ defineModule(sim, list(
   parameters = rbind(
     #defineParameter("paramName", "paramClass", default, min, max, "parameter description")),
     defineParameter("formula", "list", NULL, 
-      desc = 'a named list with two components called "beta" and "theta" of class "formula": a
-              symbolic description of the model to be fitted (beta and theta being parameters
-              of the tapered Pareto distribution).'),
+      desc = 'a named list with two components called "beta" and "theta" of class
+              "formula": a symbolic description of the model to be fitted.'),
     defineParameter("a", "numeric", NULL, 
-      desc = 'range parameter a of the tapered Pareto. The random variable x take values on the
-              interval a <= x < Inf. Values outside of this range are ignored with a warning.'),
+      desc = 'range parameter a of the tapered Pareto. The random variable x take 
+              values on the interval a <= x < Inf. Values outside of this range
+              are ignored with a warning.'),
     defineParameter("link", "list", list(beta = "log", theta = "identity"), 
-      desc = 'a named list with two components called "beta" and "theta" specifying model 
-              links for the "beta" and "theta" parameters of the tapered Pareto. These can be 
-              character strings or objects of class "link-glm". For additional details see ?family.'),
+      desc = 'a named list with two components called "beta" and "theta"
+              specifying model links for the "beta" and "theta" parameters of the
+              tapered Pareto. These can be character strings or objects of class
+              "link-glm". For additional details see ?family.'),
     defineParameter(name = "start", class = "list", default = NULL,
-      desc = 'optional. Named list with two components called "beta" and "theta" specifying 
-              starting values for the parameters to be estimated. Those are passed to nlminb
-              and can be numeric vectors, or lists of numeric vectors.'),
+      desc = 'optional. Named list with two components called "beta" and "theta"
+              specifying starting values for the coefficients to be estimated.
+              Those are passed to nlminb and can be numeric vectors, or lists of
+              numeric vectors.'),
     defineParameter(name = "lb", class = "numeric", default = NULL,
-      desc = 'optional. Named list with two components called "beta" and "theta" specifying
-              lower bounds for the parameters to be estimated. These should be numeric values.'),
+      desc = 'optional. Named list with two components called "beta" and "theta"
+              specifying numeric vectors of lower bounds for the coefficients to
+              be optimized over. These must be finite and will be recycled if 
+              necessary to match length(coefficients).'),
     defineParameter(name = "ub", class = "numeric", default = NULL, 
-      desc = 'optional. Named list with two components called "beta" and "theta" specifying
-              upper bounds for the parameters to be estimated. These should be numeric values.'),
-    defineParameter(name = "nlminb.control", class = "numeric", default = list(iter.max = 5e3L, eval.max = 5e3L),
-      desc = "optional. List of control parameters to be passed to the nlminb optmizer. See ?nlminb"),
+      desc = 'optional. Named list with two components called "beta" and "theta"
+              specifying numeric vectors of upper bounds for the coefficients to
+              be optimized over. These must be finite and will be recycled if
+              necessary to match length(coefficients).'),
+    defineParameter(name = "nlminb.control", class = "numeric",
+      default = list(iter.max = 5e3L, eval.max = 5e3L),
+      desc = "optional. List of control parameters to be passed to the nlminb 
+              optimizer. See ?nlminb"),
     defineParameter(name = "trace", class = "numeric", default = 0,
-      desc = "non-negative integer. If > 0, tracing information on the progress of the 
-              optimization is produced every trace iteration. Defaults to 0 which indicates no
-              trace information should be printed."),
+      desc = "non-negative integer. If > 0, tracing information on the progress 
+              of the optimization is produced every trace iteration. Defaults to
+              0 which indicates no trace information should be printed."),
     defineParameter(name = "data", class = "character", default = NULL,
-      desc = "optional. A character vector indicating the names of objects present in the 
-              simList environment, in which to look for variables present in the model formula.
-              Objects should be data.frames. If omitted, or if variables are not found in data
-              objects, variables are searched in the simList environment."),
+      desc = "optional. A character vector indicating the names of objects in the
+              simList environment in which to look for variables in the model. 
+              Data objects should be data.frames. If omitted, or if variables are
+              not found in data objects, variables are searched in the simList 
+              environment."),
     defineParameter(name = "initialRunTime", class = "numeric", default = start(sim),
-      desc = "optional. Simulation time at which to start this module. Defaults to simulation start time."),
+      desc = "optional. Simulation time at which to start this module. Defaults 
+              to simulation start time."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
-      desc = "optional. Interval in simulation time units between two runs of this module.")
+      desc = "optional. Interval in simulation time units between two runs of
+              this module.")
   ),
   inputObjects = data.frame(objectName = "dataFireSense_SizeFit",
                             objectClass = "data.frame",
