@@ -9,16 +9,32 @@ output:
 
 # Overview
 Fit statistical models of the fire size distribution. A tapered Pareto distribution
-is assumed. This distribution has three parameters: *a*, $\beta$ and $\theta$; *a* is
-the lower truncation point and is assumed to be known *a* priori, $\beta$ controls the
+is assumed. This distribution has three parameters: $a$, $\beta$ and $\theta$; $a$ is
+the lower truncation point and is assumed to be known $a$ priori, $\beta$ controls the
 rate of frequency decrease as fire size increases, finally $\theta$ governs the location of
 the exponential taper. This module can be used to relate $\beta$ and $\theta$ with
 environmental controls of the fire size distribution.
 
 
 # Usage
+## Module parameters
+Name|Default|Description
+----|--------------|---------------------------------------------------------------------|
+formula|NULL|a named list with two components called "beta" and "theta" of class "formula": a symbolic description of the model to be fitted (beta and theta being parameters of the tapered Pareto distribution.
+a|NULL|range parameter a of the tapered Pareto. The random variable $x$ take values on the interval $a <= x < Inf$. Values outside of this range are ignored with a warning.
+link|list(beta = "log", theta = "identity")|a named list with two components called "beta" and "theta" specifying model links for the "beta" and "theta" parameters of the tapered Pareto. These can be character strings or objects of class "link-glm". For more additional details see help("family").
+start|NULL|optional. Named list with two components called "beta" and "theta" specifying starting values for the parameters to be estimated. Those are passed to nlminb and can be numeric vectors, or lists of numeric vectors.
+lb|NULL|optional. Named list with two components called "beta" and "theta" specifying lower bounds for the parameters to be estimated. These should be numeric values.
+ub|NULL|optional. Named list with two components called "beta" and "theta" specifying upper bounds for the parameters to be estimated. These should be numeric values.
+nlminb.control|list(iter.max = 5e3L, eval.max = 5e3L)|optional. List of control parameters to be passed to the nlminb optmizer. See help("nlminb").
+trace|0|non-negative integer. If > 0, tracing information on the progress of theoptimization is produced every trace iteration. Defaults to 0 which indicates no trace information should be printed.
+data|NULL|optional. A character vector indicating the names of objects present in the simList environment, in which to look for variables present in the model formula. Objects should be data.frames. If omitted, or if variables are not found in data objects, variables are searched in the simList environment.
+initialRunTime|start(sim)|optional. Simulation time at which to start this module. Defaults to simulation start time."
+intervalRunModule|NA|optional. Interval in simulation time units between two runs of this module.
+|||
 
-```{r module_usage, eval = FALSE}
+## Example
+```{r module_usage_example, eval = FALSE}
 library(SpaDES)
 library(DEoptimR)
 library(magrittr)
@@ -29,21 +45,23 @@ set.seed(1)
 
 df <- data.frame(
   weather = rnorm(1000, 150, 30),
-  fireFrequency = rpois(1000, .5)
+  size_ha = rtappareto(1000, .3, 1e4, a = 1)
 )
 
 #outputDir <- file.path(tempdir(), "outputs")
 times <- list(start = 1, end = 1)
 parameters <- list(
   fireSense_FrequencyFit = list(
-    formula = formula(fireFrequency ~ weather),
+    formula = list(beta = size_ha ~ weather,
+                   theta = size_ha ~ weather),
+    a = 1, # Lower truncation point, here only fire with a size >= 1 ha are considered
     data = "df", ## TODO: where the data lives
     trace = 5 # Print progress every trace iteration
   )
 )
 
 modules <- list("fireSense_SizeFit")
-objects <- "df"
+objects <- "df" # Pass objects found in the global environment to the simList environment.
 paths <- list(
   # cachePath = file.path(outputDir, "cache"),
   modulePath = file.path("~/Documents/GitHub/McIntire-lab/modulesPrivate/") ## TODO: change this to tempdir()
@@ -59,29 +77,27 @@ spades(mySim)
 ```
 
 # Events
+Events are scheduled as follows:
 
-Describe what happens for each event type.
-
-## Plotting
-
-Write what is plotted.
+- Module initiation
+- Model fitting
 
 ## Saving
-
-Write what is saved.
+TODO: Write what is saved. (there is currently nothing saved, but this may change in the future)
 
 # Data dependencies
 
 ## Input data
-
-How to obtain input data, and a description of the data required by the module.
-If `sourceURL` is specified, `downloadData("fireSense_Size", "path/to/modules/dir")` may be sufficient.
+An or several objects of class data.frame in which to look for variables present in the model formula.
 
 ## Output data
+An object of class "fireSense_SizeFit", i.e. a list containing the following components:
 
-Description of the module outputs.
+- formula (model formula)
+- link (model link)
+- coef (fitted coefficients)
+- se (standard errors)
 
 # Links to other modules
-
-Describe any anticipated linkages to other modules.
+This module can be used in association with the fireSense_SizePredict module.
 

@@ -21,8 +21,8 @@ defineModule(sim, list(
   parameters = rbind(
     #defineParameter("paramName", "paramClass", default, min, max, "parameter description")),
     defineParameter("formula", "list", NULL, 
-      desc = 'a named list with two components called "beta" and "theta" of class "formula" :
-              a symbolic description of the model to be fitted (beta and theta being parameters
+      desc = 'a named list with two components called "beta" and "theta" of class "formula": a
+              symbolic description of the model to be fitted (beta and theta being parameters
               of the tapered Pareto distribution).'),
     defineParameter("a", "numeric", NULL, 
       desc = 'range parameter a of the tapered Pareto. The random variable x take values on the
@@ -30,7 +30,7 @@ defineModule(sim, list(
     defineParameter("link", "list", list(beta = "log", theta = "identity"), 
       desc = 'a named list with two components called "beta" and "theta" specifying model 
               links for the "beta" and "theta" parameters of the tapered Pareto. These can be 
-              character strings or objects of class "link-glm". For more info see ?family.'),
+              character strings or objects of class "link-glm". For additional details see ?family.'),
     defineParameter(name = "start", class = "list", default = NULL,
       desc = 'optional. Named list with two components called "beta" and "theta" specifying 
               starting values for the parameters to be estimated. Those are passed to nlminb
@@ -410,7 +410,7 @@ fireSense_SizeFitRun <- function(sim) {
   class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
   
   if (!is.na(p(sim)$intervalRunModule))
-    sim <- scheduleEvent(sim, time(sim) + p(sim)$intervalRunModule, "fireSense_SizePredict", "run")
+    sim <- scheduleEvent(sim, time(sim) + p(sim)$intervalRunModule, "fireSense_SizeFit", "run")
   
   sim
   
