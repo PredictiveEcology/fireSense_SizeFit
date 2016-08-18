@@ -16,6 +16,17 @@ the exponential taper. This module can be used to relate $\beta$ and $\theta$ wi
 environmental controls of the fire size distribution.
 
 
+# Download the module
+```{r download module, eval = FALSE, echo = TRUE}
+library(SpaDES)
+
+moduleName <- "fireSense_SizeFit"
+
+workingDirectory <- tempdir() # Change this to a place you would like to put the model, if desired.
+
+downloadModule(moduleName, path = workingDirectory)
+```
+
 # Usage
 ## Module parameters
 Name|Default|Description
@@ -68,8 +79,6 @@ paths <- list(
   # inputPath = inputDir,
   # outputPath = outputDir
 )
-
-## TODO: - provide example for partial matching for list(beta =, theta = )
  
 mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects, paths = paths)
 
