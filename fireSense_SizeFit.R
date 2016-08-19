@@ -182,8 +182,7 @@ fireSense_SizeFitRun <- function(sim) {
   on.exit(rm(envData))
   list2env(as.list(envir(sim)), envir = envData)
 
-  ## Handle data arg
-  if (!is.null(p(sim)$data))
+  if (!is.null(p(sim)$data)) ## Handling data arg
     lapply(p(sim)$data, function(x, envData) if (is.list(sim[[x]])) list2env(sim[[x]], envir = envData), envData = envData)
 
   ## Check formula for beta
