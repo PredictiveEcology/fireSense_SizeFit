@@ -51,7 +51,8 @@ library(PtProcess)
 
 set.seed(1)
 
-df <- data.frame(
+# Create random weather and fire size data
+dataObject <- data.frame(
   weather = rnorm(1000, 150, 30),
   size_ha = rtappareto(1000, .3, 1e4, a = 1)
 )
@@ -63,13 +64,13 @@ parameters <- list(
     formula = list(beta = size_ha ~ weather,
                    theta = size_ha ~ weather),
     a = 1,
-    data = "df",
+    data = "dataObject",
     trace = 5 # Print progress every 5 iterations
   )
 )
 
 modules <- list("fireSense_SizeFit")
-objects <- "df" # Pass objects found in the global environment to the simList environment.
+objects <- "dataObject" # Pass objects found in the global environment to the simList environment
 paths <- list(
   # cachePath = file.path(outputDir, "cache"),
   modulePath = file.path("~/Documents/GitHub/McIntire-lab/modulesPrivate/") ## TODO: change this to tempdir()
