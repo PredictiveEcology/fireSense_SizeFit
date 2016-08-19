@@ -38,7 +38,8 @@ defineModule(sim, list(
       desc = 'optional. Named list with two components called "beta" and "theta"
               specifying starting values for the coefficients to be estimated.
               Those are passed to nlminb and can be numeric vectors, or lists of
-              numeric vectors.'),
+              numeric vectors. In the latter case, only the best solution, i.e.
+              which minimized the most the objective function is kept.'),
     defineParameter(name = "lb", class = "numeric", default = NULL,
       desc = 'optional. Named list with two components called "beta" and "theta"
               specifying numeric vectors of lower bounds for the coefficients to
