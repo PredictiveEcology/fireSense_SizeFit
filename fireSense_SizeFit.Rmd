@@ -30,10 +30,10 @@ downloadModule(moduleName, path = workingDirectory)
 # Usage
 ## Module parameters
 Name|Default|Description
-----|--------------|---------------------------------------------------------------------
+----|:--------------:|---------------------------------------------------------------------
 formula|NULL|a named list with two components called "beta" and "theta" of class "formula": a symbolic description of the model to be fitted.
 a|NULL|range parameter a of the tapered Pareto. The random variable $x$ take values on the interval $a <= x < Inf$. Values outside of this range are ignored with a warning.
-link|list(beta = "log", theta = "identity")|a named list with two components called "beta" and "theta" specifying model links for the "beta" and "theta" parameters of the tapered Pareto. These can be character strings or objects of class "link-glm". For more additional details see help("family").
+link|list(beta = "log",<br>theta = "identity")|a named list with two components called "beta" and "theta" specifying model links for the "beta" and "theta" parameters of the tapered Pareto. These can be character strings or objects of class "link-glm". For more additional details see help("family").
 start|NULL|optional. Named list with two components called "beta" and "theta" specifying starting values for the coefficients to be estimated. Those are passed to nlminb and can be numeric vectors, or lists of numeric vectors.
 lb|NULL|optional. Named list with two components called "beta" and "theta" specifying numeric vectors of lower bounds for the coefficients to be optimized over. These must be finite and will be recycled if necessary to match length(coefficients).
 ub|NULL|optional. Named list with two components called "beta" and "theta" specifying numeric vectors of upper bounds for the coefficients to be optimized over. These must be finite and will be recycled if necessary to match length(coefficients).
@@ -47,6 +47,8 @@ intervalRunModule|NA|optional. Interval in simulation time units between two run
 ## Usage example
 ```{r module_usage_example, eval = FALSE}
 library(SpaDES)
+
+# Packages required by the module
 library(DEoptimR)
 library(magrittr)
 library(numDeriv)
