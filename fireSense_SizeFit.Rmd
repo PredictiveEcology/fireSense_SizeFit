@@ -60,7 +60,7 @@ dataObject <- data.frame(
 #outputDir <- file.path(tempdir(), "outputs")
 times <- list(start = 1, end = 1, timeunit = "year")
 parameters <- list(
-  fireSense_FrequencyFit = list(
+  fireSense_SizeFit = list(
     formula = list(beta = size_ha ~ weather,
                    theta = size_ha ~ weather),
     a = 1,
