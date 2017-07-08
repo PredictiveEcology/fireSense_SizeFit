@@ -6,14 +6,14 @@ defineModule(sim, list(
                  Pareto distribution is assumed. This distribution has three
                  parameters: a, beta and theta; a is the lower truncation point 
                  and is assumed to be known a priori, beta controls the rate of
-                 frequency decrease as fire size increases, finally theta governs
-                 the location of the exponential taper. This module can be used
-                 to relate beta and theta with environmental controls of the fire
-                 size distribution.",
+                 frequency decrease as the fire size increases, and theta
+                 governs the location of the exponential taper. This module can
+                 be used to relate beta and theta with environmental controls of
+                 the fire size distribution.",
   keywords = c("fire size distribution", "tapered Pareto", "optimization", "fireSense", "statistical model"),
   authors=c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
-  version = numeric_version("0.0.1"),
+  version = numeric_version("0.1.0"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
@@ -23,64 +23,73 @@ defineModule(sim, list(
   parameters = rbind(
     #defineParameter("paramName", "paramClass", default, min, max, "parameter description")),
     defineParameter("formula", "list", NULL, 
-      desc = 'a named list with two components called "beta" and "theta" of class
-              "formula": a symbolic description of the model to be fitted.'),
+                    desc = "a named list with two components called 'beta' and
+                            'theta' of class `formula`: a symbolic description
+                            of the model to be fitted."),
     defineParameter("a", "numeric", NULL, 
-      desc = 'range parameter a of the tapered Pareto. The random variable x take 
-              values on the interval a <= x < Inf. Values outside of this range
-              are ignored with a warning.'),
+                    desc = "lower truncation point a of the tapered Pareto. The
+                            random variable x take values on the interval 
+                            a <= x < Inf. Values outside of this range are 
+                            ignored with a warning."),
     defineParameter("link", "list", list(beta = "log", theta = "identity"), 
-      desc = 'a named list with two components called "beta" and "theta"
-              specifying model links for the "beta" and "theta" parameters of the
-              tapered Pareto. These can be character strings or objects of class
-              "link-glm". For additional details see ?family.'),
+                    desc = "a named list with two elements, 'beta' and 'theta',
+                            specifying link functions for beta and theta
+                            parameters of the tapered Pareto. These can be
+                            character strings or objects of class link-glm. For
+                            more additional details see `?family`."),
     defineParameter(name = "start", class = "list", default = NULL,
-      desc = 'optional. Named list with two components called "beta" and "theta"
-              specifying starting values for the coefficients to be estimated.
-              Those are passed to nlminb and can be numeric vectors, or lists of
-              numeric vectors. In the latter case, only the best solution, i.e.
-              which minimized the most the objective function is kept.'),
+                    desc = "optional named list with two elements, 'beta' and 
+                            'theta', specifying starting values for the 
+                            coefficients to be estimated. Those are passed to
+                            `nlminb` and can be a single vector, or a list of
+                            vectors. In the latter case, only the best solution,
+                            that is, the one which minimizes the most the
+                            objective function, is kept."),
     defineParameter(name = "lb", class = "numeric", default = NULL,
-      desc = 'optional. Named list with two components called "beta" and "theta"
-              specifying numeric vectors of lower bounds for the coefficients to
-              be optimized over. These must be finite and will be recycled if 
-              necessary to match length(coefficients).'),
+                    desc = "optional named list with two elements called beta 
+                            and theta specifying lower bounds for the 
+                            coefficients to be optimized over. These must be
+                            finite and will be recycled if necessary to match
+                            `length(coefficients)`."),
     defineParameter(name = "ub", class = "numeric", default = NULL, 
-      desc = 'optional. Named list with two components called "beta" and "theta"
-              specifying numeric vectors of upper bounds for the coefficients to
-              be optimized over. These must be finite and will be recycled if
-              necessary to match length(coefficients).'),
+                    desc = "optional named list with two elements called beta 
+                            and theta specifying numeric vectors of upper bounds
+                            for the coefficients to be optimized over. These 
+                            must be finite and will be recycled if necessary to
+                            match `length(coefficients)`."),
     defineParameter(name = "nlminb.control", class = "numeric",
-      default = list(iter.max = 5e3L, eval.max = 5e3L),
-      desc = "optional. List of control parameters to be passed to the nlminb 
-              optimizer. See ?nlminb"),
+                    default = list(iter.max = 5e3L, eval.max = 5e3L),
+                    desc = "optional list of control parameters to be passed to
+                            the `nlminb` optimizer. See `?nlminb`."),
     defineParameter(name = "trace", class = "numeric", default = 0,
-      desc = "non-negative integer. If > 0, tracing information on the progress 
-              of the optimization is produced every trace iteration. Defaults to
-              0 which indicates no trace information should be printed."),
-    defineParameter(name = "data", class = "character", default = NULL,
-      desc = "optional. A character vector indicating the names of objects in the
-              simList environment in which to look for variables in the model. 
-              Data objects should be data.frames. If omitted, or if variables are
-              not found in data objects, variables are searched in the simList 
-              environment."),
+                    desc = "non-negative `integer`. If > 0, tracing information
+                            on the progress of the optimization are printed
+                            every `trace` iteration. Default is 0, which turns
+                            off tracing."),
+    defineParameter(name = "data", class = "character", default = "dataFireSense_SizeFit",
+                    desc = "a character vector indicating the names of objects 
+                            in the `simList` environment in which to look for
+                            variables in the model. `data` objects should be
+                            data.frames. If omitted, or if variables are not
+                            found in `data` objects, variables are searched in 
+                            the `simList` environment."),
     defineParameter(name = "initialRunTime", class = "numeric", default = start(sim),
-      desc = "optional. Simulation time at which to start this module. Defaults 
-              to simulation start time."),
+                    desc = "when to start this module? By default, the start 
+                            time of the simulation."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
-      desc = "optional. Interval in simulation time units between two runs of
-              this module.")
+                    desc = "optional. Interval between two runs of this module,
+                            expressed in units of simulation time.")
   ),
-  inputObjects = data.frame(objectName = "dataFireSense_SizeFit",
-                            objectClass = "data.frame",
-                            sourceURL = "",
-                            other = NA_character_,
-                            stringsAsFactors = FALSE),
-  outputObjects = data.frame(
+  inputObjects = expectsInput(
+    objectName = "dataFireSense_SizeFit",
+    objectClass = "data.frame",
+    sourceURL = NA_character_,
+    desc = "One or more data.frames in which to look for variables present in the model formula."
+  ),
+  outputObjects = createsOutput(
     objectName = "fireSense_SizeFit",
     objectClass = "fireSense_SizeFit",
-    other = NA_character_,
-    stringsAsFactors = FALSE
+    desc = "A fitted model object of class fireSense_SizeFit."
   )
 ))
 
@@ -124,13 +133,18 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
 
 fireSense_SizeFitInit <- function(sim) {
   
-  sim <- scheduleEvent(sim, eventTime = p(sim)$initialRunTime, "fireSense_SizeFit", "run")
+  # Checking parameters
+  stopifnot(P(sim)$trace >= 0)
+  
+  sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, current(sim)$moduleName, "run")
   sim
 
 }
 
 fireSense_SizeFitRun <- function(sim) {
 
+  moduleName <- current(sim)$moduleName
+  
   ## Toolbox: set of functions used internally by the module
     ## Compute the order of magnitude
       oom <- function(x) 10 ^ (ceiling(log10(abs(x))))
@@ -181,61 +195,74 @@ fireSense_SizeFitRun <- function(sim) {
       
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
-  list2env(as.list(envir(sim)), envir = envData)
 
-  if (!is.null(p(sim)$data)) ## Handling data arg
-    lapply(p(sim)$data, function(x, envData) if (is.list(sim[[x]])) list2env(sim[[x]], envir = envData), envData = envData)
+  # Load data in the container
+  list2env(as.list(envir(sim)), envir = envData)
+  
+  lapply(P(sim)$data, function(x, envData) {
+    
+    if (!is.null(sim[[x]])) {
+      
+      if (is.list(sim[[x]]) && !is.null(names(sim[[x]]))) {
+        
+        list2env(sim[[x]], envir = envData)
+        
+      } else stop(paste0(moduleName, "> '", x, "' is not a data.frame or a named list."))
+      
+    }
+    
+  }, envData = envData)
 
   ## Check formula for beta
-  if (is.empty.model(p(sim)$formula$b))
-    stop("fireSense_SizeFit> The formula (beta) describes an empty model.")
+  if (is.empty.model(P(sim)$formula$b))
+    stop(paste0(moduleName, "> The formula (beta) describes an empty model."))
   
   ## Check formula for theta
-  if (is.empty.model(p(sim)$formula$t))
-    stop("fireSense_SizeFit> The formula (theta) describes an empty model.")
+  if (is.empty.model(P(sim)$formula$t))
+    stop(paste0(moduleName, "> The formula (theta) describes an empty model."))
 
-  termsBeta <- terms.formula(formulaBeta <- p(sim)$formula$b)
-  termsTheta <- terms.formula(formulaTheta <- p(sim)$formula$t)
+  termsBeta <- terms.formula(formulaBeta <- P(sim)$formula$b)
+  termsTheta <- terms.formula(formulaTheta <- P(sim)$formula$t)
     
   if (attr(termsBeta, "response")) y <- yBeta <- as.character(formulaBeta[[2L]])
-  else stop("fireSense_SizeFit> Incomplete formula (beta), the LHS is missing.")
+  else stop(paste0(moduleName, "> Incomplete formula (beta), the LHS is missing."))
   
   if (attr(termsTheta, "response")) yTheta <- as.character(formulaTheta[[2L]])
-  else stop("fireSense_SizeFit> Incomplete formula (theta), the LHS is missing.")
+  else stop(paste0(moduleName, "> Incomplete formula (theta), the LHS is missing."))
   
   if (!identical(yBeta, yTheta))
-    stop("fireSense_SizeFit> The response variables for beta and theta must be identical.")
+    stop(paste0(moduleName, "> The response variables for beta and theta must be identical."))
     
   ## Coerce lnB to a link-glm object
-  if (is.character(p(sim)$link$b)) {
-    lnB <- make.link(p(sim)$link$b)
-  } else if (is(p(sim)$link$b, "link-glm")) {
+  if (is.character(P(sim)$link$b)) {
+    lnB <- make.link(P(sim)$link$b)
+  } else if (is(P(sim)$link$b, "link-glm")) {
     ## Do nothing
-  } else lnB <- make.link(p(sim)$link$b) ## Try to coerce to link-glm class
+  } else lnB <- make.link(P(sim)$link$b) ## Try to coerce to link-glm class
 
   ## Coerce lnT to a link-glm object
-  if (is.character(p(sim)$link$t)) {
-    lnT <- make.link(p(sim)$link$t)
-  } else if (is(p(sim)$link$t, "link-glm")) {
+  if (is.character(P(sim)$link$t)) {
+    lnT <- make.link(P(sim)$link$t)
+  } else if (is(P(sim)$link$t, "link-glm")) {
     ## Do nothing
-  } else lnT <- make.link(p(sim)$link$t)
+  } else lnT <- make.link(P(sim)$link$t)
 
   linkfunB <- lnB$linkfun
   linkfunT <- lnT$linkfun
   
   ## No tracing if trace < 0
-  trace <- if(p(sim)$trace < 0) 0 else p(sim)$trace
+  trace <- if(P(sim)$trace < 0) 0 else P(sim)$trace
 
   ## If there are rows in the dataset where y < a, remove them
-  rm <- envData[[y]] < p(sim)$a
+  rm <- envData[[y]] < P(sim)$a
 
   if (all(rm)) { 
-    stop("fireSense_SizeFit> All rows contain values outside of the range a <= x < Inf.")
+    stop(paste0(moduleName, "> All x values are outside of the range a <= x < Inf."))
 
   } else if (any(rm)) {
     
     lapply(unique(c(all.vars(termsBeta), all.vars(termsTheta))), function(x) assign(x = x, value = envData[[x]][!rm], envir = envData))
-    warning(paste("fireSense_SizeFit> Ignored", sum(rm), "rows containing values outside of the range a <= x < Inf."), immediate. = TRUE)
+    warning(paste0(moduleName, "> Ignored ", sum(rm), " rows containing values outside of the range a <= x < Inf."), immediate. = TRUE)
     
   }
 
@@ -256,7 +283,7 @@ fireSense_SizeFitRun <- function(sim) {
   ## Define parameter bounds automatically if they are not supplied by user
   ## First defined the bounds for DEoptim, the first optimizer
     DEoptimUB <- c(
-      if (is.null(p(sim)$ub$b)) {
+      if (is.null(P(sim)$ub$b)) {
         
         ## Automatically estimate an upper boundary for each parameter
         (glm(formulaBeta, ## family gaussian link 
@@ -267,9 +294,9 @@ fireSense_SizeFitRun <- function(sim) {
            coef %>%
            abs) * 1.1
         
-      } else rep_len(p(sim)$ub$b, nB), ## User-defined bounds (recycled if necessary)
+      } else rep_len(P(sim)$ub$b, nB), ## User-defined bounds (recycled if necessary)
       
-      if (is.null(p(sim)$ub$t)) {
+      if (is.null(P(sim)$ub$t)) {
         
         ## Automatically estimate an upper boundary for each parameter
         (glm(formulaTheta,
@@ -279,7 +306,7 @@ fireSense_SizeFitRun <- function(sim) {
              data = envData) %>%
            coef %>%
            abs) * 1.1
-      } else rep_len(p(sim)$ub$t, nT) ## User-defined bounds (recycled if necessary)
+      } else rep_len(P(sim)$ub$t, nT) ## User-defined bounds (recycled if necessary)
     )
 
     ## Beta
@@ -287,39 +314,39 @@ fireSense_SizeFitRun <- function(sim) {
       switch(lnB$name,
              log = {
                
-                 if (is.null(p(sim)$lb$b)) ifelse(sign(DEoptimUB[1:nB]) == 1, -DEoptimUB[1:nB], DEoptimUB[1:nB] * 3) ## Automatically estimate a lower boundary for each parameter
-                 else rep_len(p(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
+                 if (is.null(P(sim)$lb$b)) ifelse(sign(DEoptimUB[1:nB]) == 1, -DEoptimUB[1:nB], DEoptimUB[1:nB] * 3) ## Automatically estimate a lower boundary for each parameter
+                 else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
              }, identity = {
                
-                 if (is.null(p(sim)$lb$b)) rep_len(1e-16, nB) * sign(DEoptimUB) ## Enforce non-negativity (reecycled if necessary)
-                 else rep_len(p(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
+                 if (is.null(P(sim)$lb$b)) rep_len(1e-16, nB) * sign(DEoptimUB) ## Enforce non-negativity (reecycled if necessary)
+                 else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
-             }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$b, "(beta) is not supported.")))
+             }, stop(paste0(moduleName, "> Link function ", P(sim)$link$b, " (beta) is not supported.")))
 
   ## Theta
     DEoptimLB <- c(DEoptimLB,
       switch(lnT$name,
            log = {
              
-             if (is.null(p(sim)$lb$t)) ifelse(sign(DEoptimUB[(nB + 1L):n]) == 1, -DEoptimUB[(nB + 1L):n], DEoptimUB[(nB + 1L):n] * 3) ## Automatically estimate a lower boundary for each parameter
-             else rep_len(p(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
+             if (is.null(P(sim)$lb$t)) ifelse(sign(DEoptimUB[(nB + 1L):n]) == 1, -DEoptimUB[(nB + 1L):n], DEoptimUB[(nB + 1L):n] * 3) ## Automatically estimate a lower boundary for each parameter
+             else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
            }, identity = {
              
-             if (is.null(p(sim)$lb$t)) rep_len(1e-16, nT) ## Enforce non-negativity (recycled if necessary)
-             else rep_len(p(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
+             if (is.null(P(sim)$lb$t)) rep_len(1e-16, nT) ## Enforce non-negativity (recycled if necessary)
+             else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
              
-           }, stop(paste("fireSense_SizeFit> Link function", p(sim)$link$t, "(theta) is not supported.")))
+           }, stop(paste0(moduleName, "> Link function ", P(sim)$link$t, " (theta) is not supported.")))
     )
 
   ## Then, define lower and upper bounds for the second optimizer (nlminb)
     ## Beta
       nlminbUB <-
-        if(is.null(p(sim)$ub$b)) rep_len(Inf, nB)
+        if(is.null(P(sim)$ub$b)) rep_len(Inf, nB)
         else DEoptimUB[1:nB] ## User-defined bounds
     
       nlminbLB <-
-        if (is.null(p(sim)$lb$b)) {
+        if (is.null(P(sim)$lb$b)) {
           
           switch(lnB$name,
                  log = -Inf,            ## log-link, default: -Inf for terms and 0 for breakpoints/knots
@@ -331,13 +358,13 @@ fireSense_SizeFitRun <- function(sim) {
     ## Theta
       nlminbUB <- c(nlminbUB,
                     
-        if (is.null(p(sim)$ub$t)) rep_len(Inf, nT)
+        if (is.null(P(sim)$ub$t)) rep_len(Inf, nT)
         else DEoptimUB[(nB + 1L):n] ## User-defined bounds
         
       )
     
       nlminbLB <- c(nlminbLB,
-        if (is.null(p(sim)$lb$t)) {
+        if (is.null(P(sim)$lb$t)) {
           
           switch(lnT$name,
                  log = -Inf,            ## log-link, default: -Inf for terms and 0 for breakpoints/knots
@@ -348,10 +375,10 @@ fireSense_SizeFitRun <- function(sim) {
       )
 
   ## Define the log-likelihood function (objective function)
-  sim$nll <- parse(text = paste0("-sum(dtappareto(envData[[\"", y, "\"]], lambda=beta, theta=theta, a=", p(sim)$a, ", log=TRUE))"))
+  sim$nll <- parse(text = paste0("-sum(dtappareto(envData[[\"", y, "\"]], lambda=beta, theta=theta, a=", P(sim)$a, ", log=TRUE))"))
 
   ## If starting values are not supplied
-  if (is.null(p(sim)$start)) {
+  if (is.null(P(sim)$start)) {
     ## First optimizer, get rough estimates of the parameter values
     ## Use these estimates to compute the order of magnitude of these parameters
     #     opDE <- DEoptim::DEoptim(objfun,lower=DEoptimLB,upper=DEoptimUB, control = DEoptim::DEoptim.control(itermax = 500L, trace = trace))
@@ -375,30 +402,30 @@ fireSense_SizeFitRun <- function(sim) {
       
   } else {
     
-    start <- if (is.list(p(sim)$start)) {
+    start <- if (is.list(P(sim)$start)) {
       
-      diag(sm) <- lapply(p(sim)$start, oom) %>%
+      diag(sm) <- lapply(P(sim)$start, oom) %>%
         do.call("rbind", .) %>%
         apply(2, function(x) as.numeric(names(which.max(table(x)))))
       
-      lapply(p(sim)$start, function(x) x / diag(sm))
+      lapply(P(sim)$start, function(x) x / diag(sm))
       
     } else {
       
-      diag(sm) <- oom(p(sim)$start)
-      p(sim)$start / diag(sm)
+      diag(sm) <- oom(P(sim)$start)
+      P(sim)$start / diag(sm)
       
     }
   }
   
   out <- if (is.list(start)) {
     
-    out <- lapply(start, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(p(sim)$nlminb.control, list(trace = trace)))
+    out <- lapply(start, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(P(sim)$nlminb.control, list(trace = trace)))
     
     ## Select best minimum amongst all trials
     out[[which.min(sapply(out, "[[", "objective"))]]
     
-  } else objNlminb(start, objfun, nlminbLB, nlminbUB, c(p(sim)$nlminb.control, list(trace = trace)))
+  } else objNlminb(start, objfun, nlminbLB, nlminbUB, c(P(sim)$nlminb.control, list(trace = trace)))
   
   ## Compute the standard errors around the estimates
   hess.call <- quote(numDeriv::hessian(func = objfun, x = out$par))
@@ -407,13 +434,13 @@ fireSense_SizeFitRun <- function(sim) {
   se <- try(drop(sqrt(diag(solve(hess))) %*% sm), silent = TRUE)
 
   ## Negative values in the Hessian matrix suggest that the algorithm did not converge
-  if(anyNA(se) || out$convergence) warning("fireSense_SizeFit> nlminb: algorithm did not converge", immediate. = TRUE)
+  if(anyNA(se) || out$convergence) warning(paste0(moduleName, "> nlminb: algorithm did not converge"), immediate. = TRUE)
 
   ## Parameters scaling: Revert back estimated coefficients to their original scale
   out$par <- drop(out$par %*% sm)
 
   sim$fireSense_SizeFitted <- 
-    list(formula = p(sim)$formula,
+    list(formula = P(sim)$formula,
          link = list(beta = lnB, theta = lnT),
          coef = list(beta = setNames(out$par[1:nB], colnames(mmB)),
                      theta = setNames(out$par[(nB + 1L):n], colnames(mmT))),
@@ -422,8 +449,8 @@ fireSense_SizeFitRun <- function(sim) {
   
   class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
   
-  if (!is.na(p(sim)$intervalRunModule))
-    sim <- scheduleEvent(sim, time(sim) + p(sim)$intervalRunModule, "fireSense_SizeFit", "run")
+  if (!is.na(P(sim)$intervalRunModule))
+    sim <- scheduleEvent(sim, time(sim) + P(sim)$intervalRunModule, moduleName, "run")
   
   sim
   

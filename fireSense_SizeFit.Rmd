@@ -1,14 +1,14 @@
 ---
 title: "fireSense_SizeFit"
 author: "Jean Marchal"
-date: "August 2016"
+date: "July 2017"
 output:
   html_document: default
   pdf_document: default
 ---
 
 # Overview
-Fit statistical models of the fire size distribution. A tapered Pareto distribution is assumed. This distribution has three parameters: $a$, $\beta$ and $\theta$; $a$ is the lower truncation point and is assumed to be known $a$ priori, $\beta$ controls the rate of frequency decrease as fire size increases, finally $\theta$ governs the location of the exponential taper. This module can be used to relate $\beta$ and $\theta$ with environmental controls of the fire size distribution.
+Fit statistical models of the fire size distribution. A tapered Pareto distribution is assumed. This distribution has three parameters: $a$, $\beta$ and $\theta$; $a$ is the lower truncation point and is assumed to be known $a$ priori, $\beta$ controls the rate of frequency decrease as the fire size increases, and $\theta$ governs the location of the exponential taper. This module can be used to relate $\beta$ and $\theta$ with environmental controls of the fire size distribution.
 
 
 # Download the module
@@ -17,7 +17,7 @@ library(SpaDES)
 
 moduleName <- "fireSense_SizeFit"
 
-workingDirectory <- tempdir() # Change this to a place you would like to put the module, if desired.
+workingDirectory <- tempdir() # Location where the module will be downloaded
 
 downloadModule(moduleName, path = workingDirectory)
 ```
@@ -25,18 +25,18 @@ downloadModule(moduleName, path = workingDirectory)
 # Usage
 ## Module parameters
 Name|Default|Description
-----|:--------------:|---------------------------------------------------------------------
-`formula`|`NULL`|a named `list` with two components called `beta` and `theta` of class `formula`: a symbolic description of the model to be fitted.
-`a`|`NULL`|range parameter $a$ of the tapered Pareto. The random variable $x$ take values on the interval $a <= x < Inf$. Values outside of this range are ignored with a warning.
-`link`|`list(beta = "log",`<br>`theta = "identity")`|a named `list` with two components called **beta** and **theta** specifying model links for the $\beta$ and $\theta$ parameters of the tapered Pareto. These can be `character strings` or objects of class `link-glm`. For more additional details see `?family`.
-`start`|`NULL`|optional. Named `list` with two components called **beta** and **theta** specifying starting values for the coefficients to be estimated. Those are passed to `nlminb` and can be `numeric vectors`, or `lists` of `numeric vectors`. In the latter case, only the best solution, i.e. which minimized the most the objective function is kept.
-`lb`|`NULL`|optional. Named `list` with two components called **beta** and **theta** specifying `numeric vectors` of lower bounds for the coefficients to be optimized over. These must be finite and will be recycled if necessary to match `length(coefficients)`.
-`ub`|`NULL`|optional. Named `list` with two components called **beta** and **theta** specifying `numeric vectors` of upper bounds for the coefficients to be optimized over. These must be finite and will be recycled if necessary to match `length(coefficients)`.
-`nlminb.control`|`list(iter.max = 5e3L,`<br>`eval.max = 5e3L)`|optional. `List` of control parameters to be passed to the `nlminb` optimizer. See `?nlminb`.
-`trace`|`0`|non-negative `integer`. If > 0, tracing information on the progress of the optimization is produced every trace iteration. Defaults to 0 which indicates no tracing information should be printed.
-`data`|`NULL`|optional. A `character vector` indicating the names of objects in the `simList` environment in which to look for variables in the model. Data objects should be `data.frames`. If omitted, or if variables are not found in data objects, variables are searched in the `simList` environment.
-`initialRunTime`|`start(sim)`|optional. Simulation time at which to start this module. Defaults to simulation start time.
-`intervalRunModule`|`NA`|optional. Interval in simulation time units between two runs of this module.
+----|:--------------|---------------------------------------------------------------------
+`formula`||a named list with two elements, "beta" and "theta", describing the model to be fitted. "beta" and "theta" should be formulas (see `?formula`).
+`a`||lower truncation point $a$ of the tapered Pareto. The random variable $x$ take values on the interval $a <= x < Inf$. Values outside of this range are ignored with a warning.
+`link`|`list(beta = "log",`<br>`theta = "identity")`|a named list with two elements, "beta" and "theta", specifying link functions for $\beta$ and $\theta$ parameters of the tapered Pareto. These can be character strings or objects of class link-glm. For more additional details see `?family`.
+`start`|`NULL`|optional. Named list with two elements, "beta" and "theta", specifying starting values for the coefficients to be estimated. Those are passed to `nlminb` and can be a single vector, or a list of vectors. In the latter case, only the best solution, that is, the one which minimizes the most the objective function, is kept.
+`lb`|`NULL`|optional named list with two elements called beta and theta specifying lower bounds for the coefficients to be optimized over. These must be finite and will be recycled if necessary to match `length(coefficients)`.
+`ub`|`NULL`|optional named list with two elements called beta and theta specifying upper bounds for the coefficients to be optimized over. These must be finite and will be recycled if necessary to match `length(coefficients)`.
+`nlminb.control`|`list(iter.max = 5e3L,`<br>`eval.max = 5e3L)`|optional list of control parameters to be passed to the `nlminb` optimizer. See `?nlminb`.
+`trace`|`0`|non-negative `integer`. If > 0, tracing information on the progress of the optimization are printed every `trace` iteration. Default is 0, which turns off tracing.
+`data`|`"dataFireSense_SizeFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables in the model. `data` objects should be data.frames. If omitted, or if variables are not found in `data` objects, variables are searched in the `simList` environment.
+`initialRunTime`|`start(simList)`|when to start this module? By default, the start time of the simulation.
+`intervalRunModule`|`NA`|optional. Interval between two runs of this module, expressed in units of simulation time.
 |||
 
 ## Usage example
@@ -95,16 +95,16 @@ TODO: Write what is saved. (there is currently nothing saved, but this may chang
 # Data dependencies
 
 ## Input data
-An or several objects of class `data.frame` in which to look for variables present in the model `formula`.
+- **dataFireSense_SizeFit**: one or more data.frames in which to look for variables present in the model formula.
 
 ## Output data
-An object of class `fireSense_SizeFit`, i.e. a list containing the following components:
+- **fireSense_SizeFitted**: an object of class `fireSense_SizeFit`, i.e. a list containing the following elements:
 
-- **formula** (model formula)
-- **link** (model link)
-- **coef** (fitted coefficients)
-- **se** (standard errors)
+    - formula (model formula)
+    - link (model link)
+    - coef (fitted coefficients)
+    - se (standard errors)
 
 # Links to other modules
-This module can be used in association with the fireSense_SizePredict module.
+This module could be used in association with the fireSense_SizePredict module.
 
