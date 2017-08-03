@@ -19,13 +19,13 @@ defineModule(sim, list(
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SizeFit.Rmd"),
-  reqdPkgs = list("DEoptimR", "magrittr", "numDeriv", "PtProcess"),
+  reqdPkgs = list("DEoptim", "magrittr", "numDeriv", "parallel", "PtProcess"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", default, min, max, "parameter description")),
-    defineParameter("formula", "list", NULL, 
-                    desc = "a named list with two components called 'beta' and
-                            'theta' of class `formula`: a symbolic description
-                            of the model to be fitted."),
+    defineParameter("formula", "list", list(beta = ~1, theta = ~1), 
+                    desc = "a named list with two elements, 'beta' and 'theta',
+                            describing the model to be fitted. 'beta' and 
+                            'theta' should be formulas (see `?formula`)"),
     defineParameter("a", "numeric", NULL, 
                     desc = "lower truncation point a of the tapered Pareto. The
                             random variable x take values on the interval 
@@ -37,6 +37,14 @@ defineModule(sim, list(
                             parameters of the tapered Pareto. These can be
                             character strings or objects of class link-glm. For
                             more additional details see `?family`."),
+    defineParameter(name = "data", class = "character", 
+                    default = "dataFireSense_SizeFit",
+                    desc = "a character vector indicating the names of objects 
+                            in the `simList` environment in which to look for
+                            variables present in the model formula. `data`
+                            objects should be data.frames. If variables are not
+                            found in `data` objects, they are searched in the
+                            `simList` environment."),
     defineParameter(name = "start", class = "list", default = NULL,
                     desc = "optional named list with two elements, 'beta' and 
                             'theta', specifying starting values for the 
@@ -46,33 +54,42 @@ defineModule(sim, list(
                             that is, the one which minimizes the most the
                             objective function, is kept."),
     defineParameter(name = "lb", class = "numeric", default = NULL,
-                    desc = "optional named list with two elements called beta 
-                            and theta specifying lower bounds for the 
-                            coefficients to be optimized over. These must be
+                    desc = "optional named list with two elements, 'beta' 
+                            and 'theta', specifying lower bounds for the 
+                            coefficients to be estimated. These must be
                             finite and will be recycled if necessary to match
                             `length(coefficients)`."),
     defineParameter(name = "ub", class = "numeric", default = NULL, 
-                    desc = "optional named list with two elements called beta 
-                            and theta specifying numeric vectors of upper bounds
-                            for the coefficients to be optimized over. These 
+                    desc = "optional named list with two elements, 'beta' and
+                            'theta', specifying numeric vectors of upper bounds
+                            for the coefficients to be estimated. These 
                             must be finite and will be recycled if necessary to
                             match `length(coefficients)`."),
+    defineParameter(name = "itermax", class = "integer", default = 500,
+                    desc = "integer defining the maximum number of iterations 
+                            allowed (DEoptim optimizer). Default is 500."),
+    defineParameter(name = "nTrials", class = "integer", default = 500, 
+                    desc = "if start is not supplied, nTrials defines 
+                            the number of trials, or searches, to be performed
+                            by the nlminb optimizer in order to find the best
+                            solution. Default is 500."),
+    defineParameter(name = "nCores", class = "integer", default = 1, 
+                    desc = "non-negative integer. Defines the number of logical
+                            cores to be used for parallel computation. The
+                            default value is 1, which disables parallel 
+                            computing."),
+    defineParameter(name = "trace", class = "numeric", default = 0,
+                    desc = "non-negative integer. If > 0, tracing information on
+                            the progress of the optimization are printed every
+                            `trace` iteration. If parallel computing is enable, 
+                            nlminb trace logs are written to disk. Log files are
+                            prefixed with 'fireSense_SizeFit_trace'
+                            followed by the subprocess pid. Default is 0, which
+                            turns off tracing."),    
     defineParameter(name = "nlminb.control", class = "numeric",
                     default = list(iter.max = 5e3L, eval.max = 5e3L),
                     desc = "optional list of control parameters to be passed to
                             the `nlminb` optimizer. See `?nlminb`."),
-    defineParameter(name = "trace", class = "numeric", default = 0,
-                    desc = "non-negative `integer`. If > 0, tracing information
-                            on the progress of the optimization are printed
-                            every `trace` iteration. Default is 0, which turns
-                            off tracing."),
-    defineParameter(name = "data", class = "character", default = "dataFireSense_SizeFit",
-                    desc = "a character vector indicating the names of objects 
-                            in the `simList` environment in which to look for
-                            variables in the model. `data` objects should be
-                            data.frames. If omitted, or if variables are not
-                            found in `data` objects, variables are searched in 
-                            the `simList` environment."),
     defineParameter(name = "initialRunTime", class = "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start 
                             time of the simulation."),
@@ -135,6 +152,11 @@ fireSense_SizeFitInit <- function(sim) {
   
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
+  stopifnot(P(sim)$nCores >= 1)
+  stopifnot(P(sim)$itermax >= 1)
+  stopifnot(P(sim)$nTrials >= 1)
+  if (is.null(P(sim)$a)) stop(paste0(current(sim)$moduleName, "> Parameter 'a' is missing."))
+  stopifnot(P(sim)$a > 0)
   
   sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, current(sim)$moduleName, "run")
   sim
@@ -192,26 +214,26 @@ fireSense_SizeFitRun <- function(sim) {
         
       }  
       
-      
+  # Create a container to hold the data
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
 
-  # Load data in the container
+  # Load inputs in the data container
   list2env(as.list(envir(sim)), envir = envData)
   
-  lapply(P(sim)$data, function(x, envData) {
+  for (x in P(sim)$data) {
     
     if (!is.null(sim[[x]])) {
       
-      if (is.list(sim[[x]]) && !is.null(names(sim[[x]]))) {
+      if (is.data.frame(sim[[x]])) {
         
         list2env(sim[[x]], envir = envData)
         
-      } else stop(paste0(moduleName, "> '", x, "' is not a data.frame or a named list."))
+      } else stop(paste0(moduleName, "> '", x, "' is not a data.frame."))
       
     }
     
-  }, envData = envData)
+  }
 
   ## Check formula for beta
   if (is.empty.model(P(sim)$formula$b))
@@ -231,8 +253,19 @@ fireSense_SizeFitRun <- function(sim) {
   else stop(paste0(moduleName, "> Incomplete formula (theta), the LHS is missing."))
   
   if (!identical(yBeta, yTheta))
-    stop(paste0(moduleName, "> The response variables for beta and theta must be identical."))
+    stop(paste0(moduleName, "> The response variable for beta and theta must be identical."))
     
+  allxy = sort(c(all.vars(termsBeta, "variables"),
+                 all.vars(termsTheta, "variables")))
+  
+  missing <- !allxy %in% ls(envData, all.names = TRUE)
+  
+  if (s <- sum(missing))
+    stop(paste0(moduleName, "> '", allxy[missing][1L], "'",
+                if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
+                " not found in data objects nor in the simList environment."))
+  
+  
   ## Coerce lnB to a link-glm object
   if (is.character(P(sim)$link$b)) {
     lnB <- make.link(P(sim)$link$b)
@@ -251,7 +284,7 @@ fireSense_SizeFitRun <- function(sim) {
   linkfunT <- lnT$linkfun
   
   ## No tracing if trace < 0
-  trace <- if(P(sim)$trace < 0) 0 else P(sim)$trace
+  trace <- P(sim)$trace
 
   ## If there are rows in the dataset where y < a, remove them
   rm <- envData[[y]] < P(sim)$a
@@ -314,12 +347,12 @@ fireSense_SizeFitRun <- function(sim) {
       switch(lnB$name,
              log = {
                
-                 if (is.null(P(sim)$lb$b)) ifelse(sign(DEoptimUB[1:nB]) == 1, -DEoptimUB[1:nB], DEoptimUB[1:nB] * 3) ## Automatically estimate a lower boundary for each parameter
+                 if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3 ## Automatically estimate a lower boundary for each parameter
                  else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
              }, identity = {
                
-                 if (is.null(P(sim)$lb$b)) rep_len(1e-16, nB) * sign(DEoptimUB) ## Enforce non-negativity (reecycled if necessary)
+                 if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3
                  else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
              }, stop(paste0(moduleName, "> Link function ", P(sim)$link$b, " (beta) is not supported.")))
@@ -329,11 +362,12 @@ fireSense_SizeFitRun <- function(sim) {
       switch(lnT$name,
            log = {
              
-             if (is.null(P(sim)$lb$t)) ifelse(sign(DEoptimUB[(nB + 1L):n]) == 1, -DEoptimUB[(nB + 1L):n], DEoptimUB[(nB + 1L):n] * 3) ## Automatically estimate a lower boundary for each parameter
+             if (is.null(P(sim)$lb$t)) -abs(DEoptimUB[(nB + 1L):n]) * 3 ## Automatically estimate a lower boundary for each parameter
              else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
+             
            }, identity = {
              
-             if (is.null(P(sim)$lb$t)) rep_len(1e-16, nT) ## Enforce non-negativity (recycled if necessary)
+             if (is.null(P(sim)$lb$t)) -abs(DEoptimUB[(nB + 1L):n])
              else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
              
            }, stop(paste0(moduleName, "> Link function ", P(sim)$link$t, " (theta) is not supported.")))
@@ -346,14 +380,8 @@ fireSense_SizeFitRun <- function(sim) {
         else DEoptimUB[1:nB] ## User-defined bounds
     
       nlminbLB <-
-        if (is.null(P(sim)$lb$b)) {
-          
-          switch(lnB$name,
-                 log = -Inf,            ## log-link, default: -Inf for terms and 0 for breakpoints/knots
-                 identity = 1e-16) %>%  ## identity link, default: enforce non-negativity
-            rep_len(nB)
-          
-        } else DEoptimLB[1:nB] ## User-defined bounds
+        if (is.null(P(sim)$lb$b)) rep_len(-Inf, nB)
+        else DEoptimLB[1:nB] ## User-defined bounds
   
     ## Theta
       nlminbUB <- c(nlminbUB,
@@ -364,41 +392,38 @@ fireSense_SizeFitRun <- function(sim) {
       )
     
       nlminbLB <- c(nlminbLB,
-        if (is.null(P(sim)$lb$t)) {
-          
-          switch(lnT$name,
-                 log = -Inf,            ## log-link, default: -Inf for terms and 0 for breakpoints/knots
-                 identity = 1e-16) %>%  ## identity link, default: enforce non-negativity
-            rep_len(nT)
-        
-        } else DEoptimLB[(nB + 1L):n] ## User-defined bounds
+        if (is.null(P(sim)$lb$t)) rep_len(-Inf, nT)
+        else DEoptimLB[(nB + 1L):n] ## User-defined bounds
       )
 
   ## Define the log-likelihood function (objective function)
   sim$nll <- parse(text = paste0("-sum(dtappareto(envData[[\"", y, "\"]], lambda=beta, theta=theta, a=", P(sim)$a, ", log=TRUE))"))
 
+  if (P(sim)$nCores > 1) {
+    
+    cl <- parallel::makePSOCKcluster(names = P(sim)$nCores)
+    on.exit(stopCluster(cl))
+    parallel::clusterEvalQ(cl, library("PtProcess"))
+    
+  }
+  
   ## If starting values are not supplied
   if (is.null(P(sim)$start)) {
     ## First optimizer, get rough estimates of the parameter values
     ## Use these estimates to compute the order of magnitude of these parameters
-    #     opDE <- DEoptim::DEoptim(objfun,lower=DEoptimLB,upper=DEoptimUB, control = DEoptim::DEoptim.control(itermax = 500L, trace = trace))
 
-      JDE <- list(iter = 0L)
-      i <- 0L
-      while(JDE$iter == 0L && i < 30){
-        i <- i + 1L
-        JDE.call <- quote(JDEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, trace = if(trace > 0) TRUE else FALSE, triter = trace))
-        JDE.call[names(formals(objfun)[-1])] <- parse(text = formalArgs(objfun)[-1])
-        op <- options(warn = -1)
-        JDE <- eval(JDE.call)
-        options(warn = -1)
-      }
-  
+      control <- list(itermax = P(sim)$itermax, trace = P(sim)$trace)
+      if(P(sim)$nCores > 1) control$cluster <- cl
+      
+      DEoptimCall <- quote(DEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, control = do.call("DEoptim.control", control)))
+      DEoptimCall[names(formals(objfun)[-1])] <- parse(text = formalArgs(objfun)[-1])
+      DEoptimBestMem <- eval(DEoptimCall) %>% `[[` ("optim") %>% `[[` ("bestmem")
+      
       ## Update scaling matrix
-      diag(sm) <- oom(JDE$par)
+      diag(sm) <- oom(DEoptimBestMem)
 
-      start <- c(lapply(1:500,function(i)pmin(pmax(rnorm(length(JDE$par),0L,2L)/10 + unname(JDE$par/oom(JDE$par)), nlminbLB), nlminbUB)),
-                  list(unname(JDE$par/oom(JDE$par))))
+      getRandomStarts <- function(.) pmin(pmax(rnorm(length(DEoptimBestMem),0L,2L)/10 + unname(DEoptimBestMem/oom(DEoptimBestMem)), nlminbLB), nlminbUB)
+      start <- c(lapply(1:P(sim)$nTrials, getRandomStarts), list(unname(DEoptimBestMem/oom(DEoptimBestMem))))
       
   } else {
     
@@ -406,7 +431,7 @@ fireSense_SizeFitRun <- function(sim) {
       
       diag(sm) <- lapply(P(sim)$start, oom) %>%
         do.call("rbind", .) %>%
-        apply(2, function(x) as.numeric(names(which.max(table(x)))))
+        colMeans
       
       lapply(P(sim)$start, function(x) x / diag(sm))
       
@@ -420,7 +445,15 @@ fireSense_SizeFitRun <- function(sim) {
   
   out <- if (is.list(start)) {
     
-    out <- lapply(start, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(P(sim)$nlminb.control, list(trace = trace)))
+    if (P(sim)$nCores > 1) {
+      
+      if (trace) clusterEvalQ(cl, sink(paste0("fireSense_SizeFit_trace.", Sys.getpid())))
+      
+      out <- clusterApplyLB(cl = cl, x = start, fun = objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(P(sim)$nlminb.control, list(trace = trace)))
+      
+      if (trace) clusterEvalQ(cl, sink())
+      
+    } else out <- lapply(start, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(P(sim)$nlminb.control, list(trace = trace)))
     
     ## Select best minimum amongst all trials
     out[[which.min(sapply(out, "[[", "objective"))]]
@@ -431,21 +464,25 @@ fireSense_SizeFitRun <- function(sim) {
   hess.call <- quote(numDeriv::hessian(func = objfun, x = out$par))
   hess.call[names(formals(objfun)[-1L])] <- parse(text = formalArgs(objfun)[-1L])
   hess <- eval(hess.call)
-  se <- try(drop(sqrt(diag(solve(hess))) %*% sm), silent = TRUE)
+  se <- suppressWarnings(tryCatch(drop(sqrt(diag(solve(hess))) %*% sm), error = function(e) NA))
 
+  if (out$convergence) warning(paste0(moduleName, "> nlminb optimizer did not converge (", out$message, ")"), immediate. = TRUE)
+  
   ## Negative values in the Hessian matrix suggest that the algorithm did not converge
-  if(anyNA(se) || out$convergence) warning(paste0(moduleName, "> nlminb: algorithm did not converge"), immediate. = TRUE)
+  if(anyNA(se)) warning(paste0(moduleName, "> nlminb optimizer reached relative convergence, saddle point?"), immediate. = TRUE)
 
   ## Parameters scaling: Revert back estimated coefficients to their original scale
   out$par <- drop(out$par %*% sm)
 
   sim$fireSense_SizeFitted <- 
     list(formula = P(sim)$formula,
-         link = list(beta = lnB, theta = lnT),
+         link = list(beta = lnB$name, theta = lnT$name),
          coef = list(beta = setNames(out$par[1:nB], colnames(mmB)),
                      theta = setNames(out$par[(nB + 1L):n], colnames(mmT))),
          se = list(beta = setNames(se[1:nB], colnames(mmB)),
-                   theta = setNames(se[(nB + 1L):n], colnames(mmT))))
+                   theta = setNames(se[(nB + 1L):n], colnames(mmT))),
+         LL = -out$objective,
+         AIC = 2 * length(out$par) + 2 * out$objective)
   
   class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
   
