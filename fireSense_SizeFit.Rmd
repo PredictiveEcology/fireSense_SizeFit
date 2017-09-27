@@ -110,6 +110,7 @@ TODO: Write what is saved. (there is currently nothing saved, but this may chang
     - se (standard errors)
     - LL (log-likelihood)
     - AIC (Akaike Information Criterion)
+    - convergence diagnostic
 
 # Links to other modules
 This module could be used in association with the fireSense_SizePredict module.

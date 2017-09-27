@@ -4,12 +4,13 @@ defineModule(sim, list(
   name = "fireSense_SizeFit",
   description = "Fit statistical models of the fire size distribution. A tapered
                  Pareto distribution is assumed. This distribution has three
-                 parameters: a, beta and theta; a is the lower truncation point 
+                 parameters: a, beta and theta. a is the lower truncation point 
                  and is assumed to be known a priori, beta controls the rate of
                  frequency decrease as the fire size increases, and theta
-                 governs the location of the exponential taper. This module can
-                 be used to relate beta and theta with environmental controls of
-                 the fire size distribution.",
+                 governs the location of the exponential taper. This module can 
+                 be used to assess the relation between two parameters of the 
+                 tapered Pareto distribution, beta and theta, and environmental 
+                 controls of the fire size distribution.",
   keywords = c("fire size distribution", "tapered Pareto", "optimization", "fireSense", "statistical model"),
   authors=c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
@@ -115,31 +116,29 @@ defineModule(sim, list(
 #   - type `init` is required for initialiazation
 
 doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
-  if (eventType == "init") {
+  
+  switch(
+    eventType,
+    init = { sim <- sim$fireSense_SizeFitInit(sim) },
+    run = { sim <- sim$fireSense_SizeFitRun(sim) },
+    save = {
+      # ! ----- EDIT BELOW ----- ! #
+      # do stuff for this event
 
-    sim <- sim$fireSense_SizeFitInit(sim)
+      # e.g., call your custom functions/methods here
+      # you can define your own methods below this `doEvent` function
 
-  } else if (eventType == "run") {
+      # schedule future event(s)
 
-    sim <- sim$fireSense_SizeFitRun(sim)
+      # e.g.,
+      # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SizeFit", "save")
 
-  } else if (eventType == "save") {
-    # ! ----- EDIT BELOW ----- ! #
-    # do stuff for this event
-
-    # e.g., call your custom functions/methods here
-    # you can define your own methods below this `doEvent` function
-
-    # schedule future event(s)
-
-    # e.g.,
-    # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SizeFit", "save")
-
-    # ! ----- STOP EDITING ----- ! #
-  } else {
+      # ! ----- STOP EDITING ----- ! #
+    },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
-  }
+  )
+  
   invisible(sim)
 }
 
@@ -159,7 +158,7 @@ fireSense_SizeFitInit <- function(sim) {
   stopifnot(P(sim)$a > 0)
   
   sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, current(sim)$moduleName, "run")
-  sim
+  invisible(sim)
 
 }
 
@@ -367,7 +366,7 @@ fireSense_SizeFitRun <- function(sim) {
              
            }, identity = {
              
-             if (is.null(P(sim)$lb$t)) -abs(DEoptimUB[(nB + 1L):n])
+             if (is.null(P(sim)$lb$t)) -abs(DEoptimUB[(nB + 1L):n]) * 3
              else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
              
            }, stop(paste0(moduleName, "> Link function ", P(sim)$link$t, " (theta) is not supported.")))
@@ -466,10 +465,26 @@ fireSense_SizeFitRun <- function(sim) {
   hess <- eval(hess.call)
   se <- suppressWarnings(tryCatch(drop(sqrt(diag(solve(hess))) %*% sm), error = function(e) NA))
 
-  if (out$convergence) warning(paste0(moduleName, "> nlminb optimizer did not converge (", out$message, ")"), immediate. = TRUE)
+  convergence <- FALSE
   
-  ## Negative values in the Hessian matrix suggest that the algorithm did not converge
-  if(anyNA(se)) warning(paste0(moduleName, "> nlminb optimizer reached relative convergence, saddle point?"), immediate. = TRUE)
+  if (out$convergence) {
+    
+    convergDiagnostic <- paste0("nlminb optimizer did not converge (", out$message, ")")
+    
+    warning(paste0(moduleName, "> ", convergDiagnostic), immediate. = TRUE)
+    
+  } else if(anyNA(se)) {
+    
+    ## Negative values in the Hessian matrix suggest that the algorithm did not converge
+    convergDiagnostic <- "nlminb optimizer reached relative convergence, saddle point?"
+    warning(paste0(moduleName, "> ", convergDiagnostic), immediate. = TRUE)
+  
+  } else {
+    
+    convergence <- TRUE
+    convergDiagnostic <- out$message
+    
+  }
 
   ## Parameters scaling: Revert back estimated coefficients to their original scale
   out$par <- drop(out$par %*% sm)
@@ -482,14 +497,16 @@ fireSense_SizeFitRun <- function(sim) {
          se = list(beta = setNames(se[1:nB], colnames(mmB)),
                    theta = setNames(se[(nB + 1L):n], colnames(mmT))),
          LL = -out$objective,
-         AIC = 2 * length(out$par) + 2 * out$objective)
+         AIC = 2 * length(out$par) + 2 * out$objective,
+         convergence = convergence,
+         convergenceDiagnostic = convergDiagnostic)
   
   class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
   
   if (!is.na(P(sim)$intervalRunModule))
     sim <- scheduleEvent(sim, time(sim) + P(sim)$intervalRunModule, moduleName, "run")
   
-  sim
+  invisible(sim)
   
 }
 
