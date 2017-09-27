@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SizeFit"
-author: "Jean Marchal"
+author: "Jean Marchal (jean.d.marchal@gmail.com)"
 date: "August 2017"
 output:
   html_document: default
@@ -26,7 +26,7 @@ downloadModule(moduleName, path = spadesModulesDirectory)
 ## Module parameters
 Name|Default|Description
 ----|:--------------|---------------------------------------------------------------------
-`formula`|`list(beta = ~1,`<br>&emsp;&emsp;&emsp;`theta = ~1)`|a named list with two elements, 'beta' and 'theta', describing the model to be fitted. 'beta' and 'theta' should be formulas (see `?formula`).
+`formula`|`list(beta = NA,`<br>&emsp;&emsp;&emsp;`theta = NA)`|a named list with two elements, 'beta' and 'theta', describing the model to be fitted. 'beta' and 'theta' should be formulas (see `?formula`).
 `a`||lower truncation point $a$ of the tapered Pareto. The random variable $x$ take values on the interval $a <= x < Inf$. Values outside of this range are ignored with a warning.
 `link`|`list(beta = "log",`<br>&emsp;&emsp;&emsp;`theta = "identity")`|a named list with two elements, 'beta' and 'theta', specifying link functions for $\beta$ and $\theta$ parameters of the tapered Pareto. These can be character strings or objects of class link-glm. For more additional details see `?family`.
 `data`|`"dataFireSense_SizeFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects should be data.frames. If variables are not found in `data` objects, they are searched in the `simList` environment.
@@ -46,7 +46,7 @@ Name|Default|Description
 ```{r module usage example, eval = FALSE}
 library(SpaDES)
 
-set.seed(1)
+set.seed(123)
 
 times <- list(start = 1, end = 1, timeunit = "year")
 modules <- list("fireSense_SizeFit")
@@ -93,9 +93,6 @@ Events are scheduled as follows:
 - Module initiation
 - Model fitting
 
-## Saving
-TODO: Write what is saved. (there is currently nothing saved, but this may change in the future)
-
 # Data dependencies
 
 ## Input data
@@ -105,7 +102,7 @@ TODO: Write what is saved. (there is currently nothing saved, but this may chang
 - **fireSense_SizeFitted**: an object of class `fireSense_SizeFit`, i.e. a list containing the following elements:
 
     - formula (model formula)
-    - link (model link)
+    - link (model link functions)
     - coef (fitted coefficients)
     - se (standard errors)
     - LL (log-likelihood)

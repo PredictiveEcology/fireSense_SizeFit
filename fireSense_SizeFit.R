@@ -14,7 +14,7 @@ defineModule(sim, list(
   keywords = c("fire size distribution", "tapered Pareto", "optimization", "fireSense", "statistical model"),
   authors=c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
-  version = numeric_version("0.1.0"),
+  version = list(SpaDES.core = "0.1.0", fireSense_SizeFit = "0.0.1"),,
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
@@ -23,7 +23,7 @@ defineModule(sim, list(
   reqdPkgs = list("DEoptim", "magrittr", "numDeriv", "parallel", "PtProcess"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", default, min, max, "parameter description")),
-    defineParameter("formula", "list", list(beta = ~1, theta = ~1), 
+    defineParameter("formula", "list", list(beta = NA, theta = NA), 
                     desc = "a named list with two elements, 'beta' and 'theta',
                             describing the model to be fitted. 'beta' and 
                             'theta' should be formulas (see `?formula`)"),
@@ -96,7 +96,8 @@ defineModule(sim, list(
                             time of the simulation."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
                     desc = "optional. Interval between two runs of this module,
-                            expressed in units of simulation time.")
+                            expressed in units of simulation time."),
+    defineParameter(".useCache", "numeric", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant")
   ),
   inputObjects = expectsInput(
     objectName = "dataFireSense_SizeFit",
@@ -149,15 +150,19 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
 
 fireSense_SizeFitInit <- function(sim) {
   
+  moduleName <- current(sim)$moduleName
+  
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
   stopifnot(P(sim)$nCores >= 1)
   stopifnot(P(sim)$itermax >= 1)
   stopifnot(P(sim)$nTrials >= 1)
-  if (is.null(P(sim)$a)) stop(paste0(current(sim)$moduleName, "> Parameter 'a' is missing."))
+  if (!is(P(sim)$formula$beta, "formula")) stop(paste0(moduleName, "> The supplied object for the 'formula' parameter (beta) is not of class formula."))
+  if (!is(P(sim)$formula$theta, "formula")) stop(paste0(moduleName, "> The supplied object for the 'formula' parameter (theta) is not of class formula."))
+  if (is.null(P(sim)$a)) stop(paste0(moduleName, "> Parameter 'a' is missing."))
   stopifnot(P(sim)$a > 0)
   
-  sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, current(sim)$moduleName, "run")
+  sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, moduleName, "run")
   invisible(sim)
 
 }
@@ -165,6 +170,8 @@ fireSense_SizeFitInit <- function(sim) {
 fireSense_SizeFitRun <- function(sim) {
 
   moduleName <- current(sim)$moduleName
+  currentTime <- time(sim, timeunit(sim))
+  endTime <- end(sim, timeunit(sim))
   
   ## Toolbox: set of functions used internally by the module
     ## Compute the order of magnitude
@@ -271,7 +278,7 @@ fireSense_SizeFitRun <- function(sim) {
   } else if (is(P(sim)$link$b, "link-glm")) {
     ## Do nothing
   } else lnB <- make.link(P(sim)$link$b) ## Try to coerce to link-glm class
-
+  
   ## Coerce lnT to a link-glm object
   if (is.character(P(sim)$link$t)) {
     lnT <- make.link(P(sim)$link$t)
@@ -491,7 +498,7 @@ fireSense_SizeFitRun <- function(sim) {
 
   sim$fireSense_SizeFitted <- 
     list(formula = P(sim)$formula,
-         link = list(beta = lnB$name, theta = lnT$name),
+         link = list(beta = lnB, theta = lnT),
          coef = list(beta = setNames(out$par[1:nB], colnames(mmB)),
                      theta = setNames(out$par[(nB + 1L):n], colnames(mmT))),
          se = list(beta = setNames(se[1:nB], colnames(mmB)),
@@ -503,8 +510,8 @@ fireSense_SizeFitRun <- function(sim) {
   
   class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
   
-  if (!is.na(P(sim)$intervalRunModule))
-    sim <- scheduleEvent(sim, time(sim) + P(sim)$intervalRunModule, moduleName, "run")
+  if (!is.na(P(sim)$intervalRunModule) && (currentTime + P(sim)$intervalRunModule) <= endTime) # Assumes time only moves forward
+    sim <- scheduleEvent(sim, currentTime + P(sim)$intervalRunModule, moduleName, "run")
   
   invisible(sim)
   
