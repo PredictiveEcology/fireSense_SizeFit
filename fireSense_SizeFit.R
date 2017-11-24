@@ -265,23 +265,27 @@ fireSense_SizeFitRun <- function(sim)
                 if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
                 " not found in data objects nor in the simList environment."))
   
-  
+
   ## Coerce lnB to a link-glm object
-  if (is.character(P(sim)$link$b))
-  {
-    lnB <- make.link(P(sim)$link$b)
-  }
-  else if (is(P(sim)$link$b, "link-glm"))
-  {
-    ## Do nothing
-  } else lnB <- make.link(P(sim)$link$b) ## Try to coerce to link-glm class
+  lnB <- 
+    if (is.character(P(sim)$link$b))
+    {
+      make.link(P(sim)$link$b)
+    }
+    else if (is(P(sim)$link$b, "link-glm"))
+    {
+      P(sim)$link$b
+    } else lnB <- make.link(P(sim)$link$b) ## Try to coerce to link-glm class
   
   ## Coerce lnT to a link-glm object
-  if (is.character(P(sim)$link$t)) {
-    lnT <- make.link(P(sim)$link$t)
-  } else if (is(P(sim)$link$t, "link-glm")) {
-    ## Do nothing
-  } else lnT <- make.link(P(sim)$link$t)
+  lnT <- 
+    if (is.character(P(sim)$link$t))
+    {
+      make.link(P(sim)$link$t)
+    } else if (is(P(sim)$link$t, "link-glm"))
+    {
+      P(sim)$link$t
+    } else lnT <- make.link(P(sim)$link$t)
 
   linkfunB <- lnB$linkfun
   linkfunT <- lnT$linkfun
@@ -358,7 +362,9 @@ fireSense_SizeFitRun <- function(sim)
                  if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3
                  else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
-             }, stop(paste0(moduleName, "> Link function ", P(sim)$link$b, " (beta) is not supported.")))
+             }, stop(paste0(moduleName, "> Link function ", P(sim)$link$b, 
+                            " (beta) is not supported by the process for automated estimation of lower bounds."))
+      )
 
   ## Theta
     DEoptimLB <- c(DEoptimLB,
@@ -373,10 +379,11 @@ fireSense_SizeFitRun <- function(sim)
              if (is.null(P(sim)$lb$t)) -abs(DEoptimUB[(nB + 1L):n]) * 3
              else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
              
-           }, stop(paste0(moduleName, "> Link function ", P(sim)$link$t, " (theta) is not supported.")))
+           }
+      )
     )
-
-  ## Then, define lower and upper bounds for the second optimizer (nlminb)
+  
+    ## Then, define lower and upper bounds for the second optimizer (nlminb)
     ## Beta
       nlminbUB <-
         if(is.null(P(sim)$ub$b)) rep_len(Inf, nB)
