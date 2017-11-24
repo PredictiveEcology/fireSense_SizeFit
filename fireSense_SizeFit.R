@@ -189,8 +189,8 @@ fireSense_SizeFitRun <- function(sim)
         if(length(theta) == 1L) theta <- rep_len(theta, length(beta)) ## Recycled if needed
         
         ## link implementation
-        beta <- linkfunB(beta)
-        theta <- linkfunT(theta)
+        beta <- linkinvB(beta)
+        theta <- linkinvT(theta)
         
         if(any(beta <= 0L) || anyNA(beta) || any(is.infinite(beta)) || any(theta <= 0L) || anyNA(theta) || any(is.infinite(theta))) return(1e20)
         else return(eval(nll))
@@ -287,8 +287,8 @@ fireSense_SizeFitRun <- function(sim)
       P(sim)$link$t
     } else lnT <- make.link(P(sim)$link$t)
 
-  linkfunB <- lnB$linkfun
-  linkfunT <- lnT$linkfun
+  linkinvB <- lnB$linkinv
+  linkinvT <- lnT$linkinv
   
   ## No tracing if trace < 0
   trace <- P(sim)$trace
