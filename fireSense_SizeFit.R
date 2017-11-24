@@ -12,9 +12,9 @@ defineModule(sim, list(
                  tapered Pareto distribution, beta and theta, and environmental 
                  controls of the fire size distribution.",
   keywords = c("fire size distribution", "tapered Pareto", "optimization", "fireSense", "statistical model"),
-  authors=c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
+  authors=person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre")),
   childModules = character(),
-  version = list(SpaDES.core = "0.1.0", fireSense_SizeFit = "0.0.1"),,
+  version = list(SpaDES.core = "0.1.0", fireSense_SizeFit = "0.0.1"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
@@ -116,8 +116,8 @@ defineModule(sim, list(
 ## event types
 #   - type `init` is required for initialiazation
 
-doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
-  
+doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) 
+{
   switch(
     eventType,
     init = { sim <- sim$fireSense_SizeFitInit(sim) },
@@ -148,8 +148,8 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) {
 #   - `modulenameInit()` function is required for initiliazation;
 #   - keep event functions short and clean, modularize by calling subroutines from section below.
 
-fireSense_SizeFitInit <- function(sim) {
-  
+fireSense_SizeFitInit <- function(sim) 
+{
   moduleName <- current(sim)$moduleName
   
   # Checking parameters
@@ -164,11 +164,10 @@ fireSense_SizeFitInit <- function(sim) {
   
   sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, moduleName, "run")
   invisible(sim)
-
 }
 
-fireSense_SizeFitRun <- function(sim) {
-
+fireSense_SizeFitRun <- function(sim)
+{
   moduleName <- current(sim)$moduleName
   currentTime <- time(sim, timeunit(sim))
   endTime <- end(sim, timeunit(sim))
@@ -178,8 +177,8 @@ fireSense_SizeFitRun <- function(sim) {
       oom <- function(x) 10 ^ (ceiling(log10(abs(x))))
     
     ## Function to pass to the optimizer
-      objfun <- function(params, sm, mmB, mmT, nB, n, linkfunB, linkfunT, y, envData) {
-        
+      objfun <- function(params, sm, mmB, mmT, nB, n, linkinvB, linkinvT, y, envData) 
+      {
         ## Parameters scaling
         params <- drop(params %*% sm)
         
@@ -195,12 +194,11 @@ fireSense_SizeFitRun <- function(sim) {
         
         if(any(beta <= 0L) || anyNA(beta) || any(is.infinite(beta)) || any(theta <= 0L) || anyNA(theta) || any(is.infinite(theta))) return(1e20)
         else return(eval(nll))
-
       }
   
     ## Nlminb wrapper
-      objNlminb <- function(start, objective, lower, upper, control) {
-        
+      objNlminb <- function(start, objective, lower, upper, control)
+      {
         nlminb.call <- quote(nlminb(start = start, objective = objective, lower = lower, upper = upper, control = control))
         nlminb.call[names(formals(objective)[-1L])] <- parse(text = formalArgs(objective)[-1L])
         
@@ -217,7 +215,6 @@ fireSense_SizeFitRun <- function(sim) {
         
         options(op)
         o
-        
       }  
       
   # Create a container to hold the data
@@ -227,18 +224,15 @@ fireSense_SizeFitRun <- function(sim) {
   # Load inputs in the data container
   list2env(as.list(envir(sim)), envir = envData)
   
-  for (x in P(sim)$data) {
-    
-    if (!is.null(sim[[x]])) {
-      
-      if (is.data.frame(sim[[x]])) {
-        
+  for (x in P(sim)$data) 
+  {
+    if (!is.null(sim[[x]])) 
+    {
+      if (is.data.frame(sim[[x]]))
+      {
         list2env(sim[[x]], envir = envData)
-        
       } else stop(paste0(moduleName, "> '", x, "' is not a data.frame."))
-      
     }
-    
   }
 
   ## Check formula for beta
@@ -273,9 +267,12 @@ fireSense_SizeFitRun <- function(sim) {
   
   
   ## Coerce lnB to a link-glm object
-  if (is.character(P(sim)$link$b)) {
+  if (is.character(P(sim)$link$b))
+  {
     lnB <- make.link(P(sim)$link$b)
-  } else if (is(P(sim)$link$b, "link-glm")) {
+  }
+  else if (is(P(sim)$link$b, "link-glm"))
+  {
     ## Do nothing
   } else lnB <- make.link(P(sim)$link$b) ## Try to coerce to link-glm class
   
@@ -295,14 +292,14 @@ fireSense_SizeFitRun <- function(sim) {
   ## If there are rows in the dataset where y < a, remove them
   rm <- envData[[y]] < P(sim)$a
 
-  if (all(rm)) { 
+  if (all(rm)) 
+  { 
     stop(paste0(moduleName, "> All x values are outside of the range a <= x < Inf."))
-
-  } else if (any(rm)) {
-    
+  } 
+  else if (any(rm))
+  {
     lapply(unique(c(all.vars(termsBeta), all.vars(termsTheta))), function(x) assign(x = x, value = envData[[x]][!rm], envir = envData))
     warning(paste0(moduleName, "> Ignored ", sum(rm), " rows containing values outside of the range a <= x < Inf."), immediate. = TRUE)
-    
   }
 
   ## Number of terms
@@ -322,8 +319,8 @@ fireSense_SizeFitRun <- function(sim) {
   ## Define parameter bounds automatically if they are not supplied by user
   ## First defined the bounds for DEoptim, the first optimizer
     DEoptimUB <- c(
-      if (is.null(P(sim)$ub$b)) {
-        
+      if (is.null(P(sim)$ub$b)) 
+      {
         ## Automatically estimate an upper boundary for each parameter
         (glm(formulaBeta, ## family gaussian link 
              family = gaussian(link = lnB$name),
@@ -335,8 +332,8 @@ fireSense_SizeFitRun <- function(sim) {
         
       } else rep_len(P(sim)$ub$b, nB), ## User-defined bounds (recycled if necessary)
       
-      if (is.null(P(sim)$ub$t)) {
-        
+      if (is.null(P(sim)$ub$t))
+      {
         ## Automatically estimate an upper boundary for each parameter
         (glm(formulaTheta,
              family = gaussian(link = lnT$name),
@@ -391,10 +388,8 @@ fireSense_SizeFitRun <- function(sim) {
   
     ## Theta
       nlminbUB <- c(nlminbUB,
-                    
         if (is.null(P(sim)$ub$t)) rep_len(Inf, nT)
         else DEoptimUB[(nB + 1L):n] ## User-defined bounds
-        
       )
     
       nlminbLB <- c(nlminbLB,
@@ -405,16 +400,16 @@ fireSense_SizeFitRun <- function(sim) {
   ## Define the log-likelihood function (objective function)
   sim$nll <- parse(text = paste0("-sum(dtappareto(envData[[\"", y, "\"]], lambda=beta, theta=theta, a=", P(sim)$a, ", log=TRUE))"))
 
-  if (P(sim)$nCores > 1) {
-    
+  if (P(sim)$nCores > 1) 
+  {
     cl <- parallel::makePSOCKcluster(names = P(sim)$nCores)
     on.exit(stopCluster(cl))
     parallel::clusterEvalQ(cl, library("PtProcess"))
-    
   }
   
   ## If starting values are not supplied
-  if (is.null(P(sim)$start)) {
+  if (is.null(P(sim)$start))
+  {
     ## First optimizer, get rough estimates of the parameter values
     ## Use these estimates to compute the order of magnitude of these parameters
 
@@ -430,29 +425,28 @@ fireSense_SizeFitRun <- function(sim) {
 
       getRandomStarts <- function(.) pmin(pmax(rnorm(length(DEoptimBestMem),0L,2L)/10 + unname(DEoptimBestMem/oom(DEoptimBestMem)), nlminbLB), nlminbUB)
       start <- c(lapply(1:P(sim)$nTrials, getRandomStarts), list(unname(DEoptimBestMem/oom(DEoptimBestMem))))
-      
-  } else {
-    
-    start <- if (is.list(P(sim)$start)) {
-      
+  } 
+  else 
+  {
+    start <- if (is.list(P(sim)$start))
+    {
       diag(sm) <- lapply(P(sim)$start, oom) %>%
         do.call("rbind", .) %>%
         colMeans
       
       lapply(P(sim)$start, function(x) x / diag(sm))
-      
-    } else {
-      
+    } 
+    else 
+    {
       diag(sm) <- oom(P(sim)$start)
       P(sim)$start / diag(sm)
-      
     }
   }
   
-  out <- if (is.list(start)) {
-    
-    if (P(sim)$nCores > 1) {
-      
+  out <- if (is.list(start)) 
+  {
+    if (P(sim)$nCores > 1) 
+    {
       if (trace) clusterEvalQ(cl, sink(paste0("fireSense_SizeFit_trace.", Sys.getpid())))
       
       out <- clusterApplyLB(cl = cl, x = start, fun = objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(P(sim)$nlminb.control, list(trace = trace)))
@@ -472,25 +466,24 @@ fireSense_SizeFitRun <- function(sim) {
   hess <- eval(hess.call)
   se <- suppressWarnings(tryCatch(drop(sqrt(diag(solve(hess))) %*% sm), error = function(e) NA))
 
-  convergence <- FALSE
+  convergence <- TRUE
   
-  if (out$convergence) {
-    
+  if (out$convergence) 
+  {
+    convergence <- FALSE
     convergDiagnostic <- paste0("nlminb optimizer did not converge (", out$message, ")")
-    
     warning(paste0(moduleName, "> ", convergDiagnostic), immediate. = TRUE)
-    
-  } else if(anyNA(se)) {
-    
+  } 
+  else if(anyNA(se)) 
+  {
     ## Negative values in the Hessian matrix suggest that the algorithm did not converge
+    convergence <- FALSE
     convergDiagnostic <- "nlminb optimizer reached relative convergence, saddle point?"
     warning(paste0(moduleName, "> ", convergDiagnostic), immediate. = TRUE)
-  
-  } else {
-    
-    convergence <- TRUE
+  }
+  else 
+  {
     convergDiagnostic <- out$message
-    
   }
 
   ## Parameters scaling: Revert back estimated coefficients to their original scale
@@ -514,11 +507,11 @@ fireSense_SizeFitRun <- function(sim) {
     sim <- scheduleEvent(sim, currentTime + P(sim)$intervalRunModule, moduleName, "run")
   
   invisible(sim)
-  
 }
 
 ### template for save events
-fireSense_SizeFitSave <- function(sim) {
+fireSense_SizeFitSave <- function(sim) 
+{
   # ! ----- EDIT BELOW ----- ! #
   # do stuff for this event
   sim <- saveFiles(sim)
