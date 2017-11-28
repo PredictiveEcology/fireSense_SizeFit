@@ -29,7 +29,7 @@ parameters <- list(
 # Define from where and how data will be loaded in the simList environment
 inputs <- data.frame(
   objectName = "dataFireSense_SizeFit",
-  file = "Z:/Contrats/Pessiere/DataInputs/dataFireSense_SizeFit_foudre.rds",
+  file = "C:/Z/Contrats/Pessiere/DataInputs/dataFireSense_SizeFit_foudre.rds",
   fun = "readRDS",
   package = "base",
   loadTime = 1

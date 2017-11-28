@@ -231,7 +231,8 @@ fireSense_SizeFitRun <- function(sim)
       if (is.data.frame(sim[[x]]))
       {
         list2env(sim[[x]], envir = envData)
-      } else stop(paste0(moduleName, "> '", x, "' is not a data.frame."))
+      }
+      else stop(paste0(moduleName, "> '", x, "' is not a data.frame."))
     }
   }
 
@@ -275,17 +276,20 @@ fireSense_SizeFitRun <- function(sim)
     else if (is(P(sim)$link$b, "link-glm"))
     {
       P(sim)$link$b
-    } else lnB <- make.link(P(sim)$link$b) ## Try to coerce to link-glm class
+    } 
+    else lnB <- make.link(P(sim)$link$b) ## Try to coerce to link-glm class
   
   ## Coerce lnT to a link-glm object
   lnT <- 
     if (is.character(P(sim)$link$t))
     {
       make.link(P(sim)$link$t)
-    } else if (is(P(sim)$link$t, "link-glm"))
+    } 
+    else if (is(P(sim)$link$t, "link-glm"))
     {
       P(sim)$link$t
-    } else lnT <- make.link(P(sim)$link$t)
+    } 
+    else lnT <- make.link(P(sim)$link$t)
 
   linkinvB <- lnB$linkinv
   linkinvT <- lnT$linkinv
@@ -333,8 +337,8 @@ fireSense_SizeFitRun <- function(sim)
              data = envData) %>%
            coef %>%
            abs) * 1.1
-        
-      } else rep_len(P(sim)$ub$b, nB), ## User-defined bounds (recycled if necessary)
+      }
+      else rep_len(P(sim)$ub$b, nB), ## User-defined bounds (recycled if necessary)
       
       if (is.null(P(sim)$ub$t))
       {
@@ -346,7 +350,8 @@ fireSense_SizeFitRun <- function(sim)
              data = envData) %>%
            coef %>%
            abs) * 1.1
-      } else rep_len(P(sim)$ub$t, nT) ## User-defined bounds (recycled if necessary)
+      } 
+      else rep_len(P(sim)$ub$t, nT) ## User-defined bounds (recycled if necessary)
     )
 
     ## Beta
@@ -459,13 +464,13 @@ fireSense_SizeFitRun <- function(sim)
       out <- clusterApplyLB(cl = cl, x = start, fun = objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(P(sim)$nlminb.control, list(trace = trace)))
       
       if (trace) clusterEvalQ(cl, sink())
-      
-    } else out <- lapply(start, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(P(sim)$nlminb.control, list(trace = trace)))
+    } 
+    else out <- lapply(start, objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(P(sim)$nlminb.control, list(trace = trace)))
     
     ## Select best minimum amongst all trials
     out[[which.min(sapply(out, "[[", "objective"))]]
-    
-  } else objNlminb(start, objfun, nlminbLB, nlminbUB, c(P(sim)$nlminb.control, list(trace = trace)))
+  } 
+  else objNlminb(start, objfun, nlminbLB, nlminbUB, c(P(sim)$nlminb.control, list(trace = trace)))
   
   ## Compute the standard errors around the estimates
   hess.call <- quote(numDeriv::hessian(func = objfun, x = out$par))
