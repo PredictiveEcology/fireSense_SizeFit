@@ -256,8 +256,8 @@ fireSense_SizeFitRun <- function(sim)
   if (!identical(yBeta, yTheta))
     stop(paste0(moduleName, "> The response variable for beta and theta must be identical."))
     
-  allxy = sort(c(all.vars(termsBeta, "variables"),
-                 all.vars(termsTheta, "variables")))
+  allxy = unique(sort(c(all.vars(termsBeta, "variables"),
+                 all.vars(termsTheta, "variables"))))
   
   missing <- !allxy %in% ls(envData, all.names = TRUE)
   
