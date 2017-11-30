@@ -102,6 +102,7 @@ Events are scheduled as follows:
 - **fireSense_SizeFitted**: an object of class `fireSense_SizeFit`, i.e. a list containing the following elements:
 
     - formula (model formula)
+    - a (lower truncation point)
     - link (model link functions)
     - coef (fitted coefficients)
     - se (standard errors)

@@ -503,6 +503,7 @@ fireSense_SizeFitRun <- function(sim)
 
   sim$fireSense_SizeFitted <- 
     list(formula = P(sim)$formula,
+         a = P(sim)$a,
          link = list(beta = lnB, theta = lnT),
          coef = list(beta = setNames(out$par[1:nB], colnames(mmB)),
                      theta = setNames(out$par[(nB + 1L):n], colnames(mmT))),
