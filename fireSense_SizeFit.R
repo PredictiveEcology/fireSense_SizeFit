@@ -512,7 +512,8 @@ fireSense_SizeFitRun <- function(sim)
          LL = -out$objective,
          AIC = 2 * length(out$par) + 2 * out$objective,
          convergence = convergence,
-         convergenceDiagnostic = convergDiagnostic)
+         convergenceDiagnostic = convergDiagnostic
+    )
   
   class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
   
