@@ -108,6 +108,7 @@ Events are scheduled as follows:
     - se (standard errors)
     - LL (log-likelihood)
     - AIC (Akaike Information Criterion)
+    - convergence
     - convergence diagnostic
 
 # Links to other modules
