@@ -330,11 +330,11 @@ fireSense_SizeFitRun <- function(sim)
       if (is.null(P(sim)$ub$b)) 
       {
         ## Automatically estimate an upper boundary for each parameter
-        (glm(formulaBeta, ## family gaussian link 
+        (suppressWarnings(glm(formulaBeta, ## family gaussian link 
              family = gaussian(link = lnB$name),
              y = FALSE,
              model = FALSE,
-             data = envData) %>%
+             data = envData)) %>%
            coef %>%
            abs) * 1.1
       }
@@ -343,11 +343,11 @@ fireSense_SizeFitRun <- function(sim)
       if (is.null(P(sim)$ub$t))
       {
         ## Automatically estimate an upper boundary for each parameter
-        (glm(formulaTheta,
+        (suppressWarnings(glm(formulaTheta,
              family = gaussian(link = lnT$name),
              y = FALSE,
              model = FALSE,
-             data = envData) %>%
+             data = envData)) %>%
            coef %>%
            abs) * 1.1
       } 
