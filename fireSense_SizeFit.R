@@ -32,7 +32,7 @@ defineModule(sim, list(
                             random variable x take values on the interval 
                             a <= x < Inf. Values outside of this range are 
                             ignored with a warning."),
-    defineParameter("link", "list", list(beta = "log", theta = "identity"), 
+    defineParameter("link", "list", list(beta = "log", theta = "log"), 
                     desc = "a named list with two elements, 'beta' and 'theta',
                             specifying link functions for beta and theta
                             parameters of the tapered Pareto. These can be
@@ -66,9 +66,9 @@ defineModule(sim, list(
                             for the coefficients to be estimated. These 
                             must be finite and will be recycled if necessary to
                             match `length(coefficients)`."),
-    defineParameter(name = "itermax", class = "integer", default = 500,
+    defineParameter(name = "itermax", class = "integer", default = 2000,
                     desc = "integer defining the maximum number of iterations 
-                            allowed (DEoptim optimizer). Default is 500."),
+                            allowed (DEoptim optimizer). Default is 2000."),
     defineParameter(name = "nTrials", class = "integer", default = 500, 
                     desc = "if start is not supplied, nTrials defines 
                             the number of trials, or searches, to be performed
@@ -208,7 +208,8 @@ fireSense_SizeFitRun <- function(sim)
         i <- 1L
         
         ## When there is no convergence and restart is possible, run nlminb() again
-        while(as.integer(gsub("[\\(\\)]", "", regmatches(o$message, gregexpr("\\(.*?\\)", o$message))[[1L]])) %in% 7:14 & i < 3L){
+        while(as.integer(gsub("[\\(\\)]", "", regmatches(o$message, gregexpr("\\(.*?\\)", o$message))[[1L]])) %in% 7:14 & i < 3L)
+        {
           i <- i + 1L
           o <- eval(nlminb.call)
         }
