@@ -22,6 +22,7 @@ parameters <- list(
     formula = formula_1v,
     data = "dataFireSense_SizeFit",
     a = 1,
+    itermax = 200,
     trace = 10 # Print progress every 10 iterations
   )
 )
