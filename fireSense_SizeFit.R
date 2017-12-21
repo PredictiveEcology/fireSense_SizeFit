@@ -43,9 +43,7 @@ defineModule(sim, list(
                     desc = "a character vector indicating the names of objects 
                             in the `simList` environment in which to look for
                             variables present in the model formula. `data`
-                            objects should be data.frames. If variables are not
-                            found in `data` objects, they are searched in the
-                            `simList` environment."),
+                            objects should be data.frames."),
     defineParameter(name = "start", class = "list", default = NULL,
                     desc = "optional named list with two elements, 'beta' and 
                             'theta', specifying starting values for the 
@@ -151,7 +149,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE)
 fireSense_SizeFitInit <- function(sim) 
 {
   moduleName <- current(sim)$moduleName
-  
+
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
   stopifnot(P(sim)$nCores >= 1)
@@ -221,9 +219,6 @@ fireSense_SizeFitRun <- function(sim)
   # Create a container to hold the data
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
-
-  # Load inputs in the data container
-  list2env(as.list(envir(sim)), envir = envData)
   
   for (x in P(sim)$data) 
   {
@@ -419,7 +414,7 @@ fireSense_SizeFitRun <- function(sim)
     on.exit(stopCluster(cl))
     parallel::clusterEvalQ(cl, library("PtProcess"))
   }
-  
+
   ## If starting values are not supplied
   if (is.null(P(sim)$start))
   {
@@ -428,7 +423,7 @@ fireSense_SizeFitRun <- function(sim)
 
       control <- list(itermax = P(sim)$itermax, trace = P(sim)$trace)
       if(P(sim)$nCores > 1) control$cluster <- cl
-      
+
       DEoptimCall <- quote(DEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, control = do.call("DEoptim.control", control)))
       DEoptimCall[names(formals(objfun)[-1])] <- parse(text = formalArgs(objfun)[-1])
       DEoptimBestMem <- eval(DEoptimCall) %>% `[[` ("optim") %>% `[[` ("bestmem")
