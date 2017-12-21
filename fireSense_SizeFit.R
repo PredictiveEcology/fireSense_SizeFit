@@ -260,7 +260,7 @@ fireSense_SizeFitRun <- function(sim)
   if (s <- sum(missing))
     stop(paste0(moduleName, "> '", allxy[missing][1L], "'",
                 if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
-                " not found in data objects nor in the simList environment."))
+                " not found in data objects."))
   
 
   ## Coerce lnB to a link-glm object
