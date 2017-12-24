@@ -97,6 +97,10 @@ defineModule(sim, list(
     defineParameter(name = ".runInterval", class = "numeric", default = NA, 
                     desc = "optional. Interval between two runs of this module,
                             expressed in units of simulation time."),
+    defineParameter(name = ".saveInitialTime", class = "numeric", default = NA, 
+                    desc = "optional. When to start saving output to a file."),
+    defineParameter(name = ".saveInitialTime", class = "numeric", default = NA, 
+                    desc = "optional. Interval between save events."),
     defineParameter(".useCache", "numeric", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant")
   ),
   inputObjects = expectsInput(
@@ -122,20 +126,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE)
     eventType,
     init = { sim <- sim$fireSense_SizeFitInit(sim) },
     run = { sim <- sim$fireSense_SizeFitRun(sim) },
-    save = {
-      # ! ----- EDIT BELOW ----- ! #
-      # do stuff for this event
-
-      # e.g., call your custom functions/methods here
-      # you can define your own methods below this `doEvent` function
-
-      # schedule future event(s)
-
-      # e.g.,
-      # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SizeFit", "save")
-
-      # ! ----- STOP EDITING ----- ! #
-    },
+    save = { sim <- sim$fireSense_SizeFitSave(sim) },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
   )
@@ -163,6 +154,10 @@ fireSense_SizeFitInit <- function(sim)
   stopifnot(P(sim)$a > 0)
   
   sim <- scheduleEvent(sim, eventTime = P(sim)$.runInitialTime, moduleName, "run")
+  
+  if (!is.na(P(sim)$.saveInitialTime))
+    sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, moduleName, "save", .last())
+  
   invisible(sim)
 }
 
@@ -419,23 +414,23 @@ fireSense_SizeFitRun <- function(sim)
     on.exit(stopCluster(cl))
     parallel::clusterEvalQ(cl, library("PtProcess"))
   }
-
+  
   ## If starting values are not supplied
   if (is.null(P(sim)$start))
   {
     ## First optimizer, get rough estimates of the parameter values
     ## Use these estimates to compute the order of magnitude of these parameters
-  
+
       control <- list(itermax = P(sim)$itermax, trace = P(sim)$trace)
       if(P(sim)$nCores > 1) control$cluster <- cl
-
+      
       DEoptimCall <- quote(DEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, control = do.call("DEoptim.control", control)))
       DEoptimCall[names(formals(objfun)[-1])] <- parse(text = formalArgs(objfun)[-1])
       DEoptimBestMem <- eval(DEoptimCall) %>% `[[` ("optim") %>% `[[` ("bestmem")
       
       ## Update scaling matrix
       diag(sm) <- oom(DEoptimBestMem)
-      
+
       getRandomStarts <- function(.) pmin(pmax(rnorm(length(DEoptimBestMem),0L,2L)/10 + unname(DEoptimBestMem/oom(DEoptimBestMem)), nlminbLB), nlminbUB)
       start <- c(lapply(1:P(sim)$nTrials, getRandomStarts), list(unname(DEoptimBestMem/oom(DEoptimBestMem))))
   } 
@@ -524,13 +519,20 @@ fireSense_SizeFitRun <- function(sim)
   invisible(sim)
 }
 
-### template for save events
+
 fireSense_SizeFitSave <- function(sim) 
 {
-  # ! ----- EDIT BELOW ----- ! #
-  # do stuff for this event
-  sim <- saveFiles(sim)
+  moduleName <- current(sim)$moduleName
+  timeUnit <- timeunit(sim)
+  currentTime <- time(sim, timeUnit)
   
-  # ! ----- STOP EDITING ----- ! #
-  return(invisible(sim))
+  saveRDS(
+    sim$fireSense_SizeFitted, 
+    file = file.path(paths(sim)$out, paste0("fireSense_SizeFitted_", timeUnit, currentTime, ".rds"))
+  )
+  
+  if (!is.na(P(sim)$.saveInterval))
+    sim <- scheduleEvent(sim, currentTime + P(sim)$.saveInterval, moduleName, "save", .last())
+  
+  invisible(sim)
 }
