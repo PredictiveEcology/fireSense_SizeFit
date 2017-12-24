@@ -91,10 +91,10 @@ defineModule(sim, list(
                     default = list(iter.max = 5e3L, eval.max = 5e3L),
                     desc = "optional list of control parameters to be passed to
                             the `nlminb` optimizer. See `?nlminb`."),
-    defineParameter(name = "initialRunTime", class = "numeric", default = start(sim),
+    defineParameter(name = ".runInitialTime", class = "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start 
                             time of the simulation."),
-    defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
+    defineParameter(name = ".runInterval", class = "numeric", default = NA, 
                     desc = "optional. Interval between two runs of this module,
                             expressed in units of simulation time."),
     defineParameter(".useCache", "numeric", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant")
@@ -151,7 +151,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE)
 fireSense_SizeFitInit <- function(sim) 
 {
   moduleName <- current(sim)$moduleName
-
+  
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
   stopifnot(P(sim)$nCores >= 1)
@@ -162,7 +162,7 @@ fireSense_SizeFitInit <- function(sim)
   if (is.null(P(sim)$a)) stop(paste0(moduleName, "> Parameter 'a' is missing."))
   stopifnot(P(sim)$a > 0)
   
-  sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, moduleName, "run")
+  sim <- scheduleEvent(sim, eventTime = P(sim)$.runInitialTime, moduleName, "run")
   invisible(sim)
 }
 
@@ -425,7 +425,7 @@ fireSense_SizeFitRun <- function(sim)
   {
     ## First optimizer, get rough estimates of the parameter values
     ## Use these estimates to compute the order of magnitude of these parameters
-
+  
       control <- list(itermax = P(sim)$itermax, trace = P(sim)$trace)
       if(P(sim)$nCores > 1) control$cluster <- cl
 
@@ -435,7 +435,7 @@ fireSense_SizeFitRun <- function(sim)
       
       ## Update scaling matrix
       diag(sm) <- oom(DEoptimBestMem)
-
+      
       getRandomStarts <- function(.) pmin(pmax(rnorm(length(DEoptimBestMem),0L,2L)/10 + unname(DEoptimBestMem/oom(DEoptimBestMem)), nlminbLB), nlminbUB)
       start <- c(lapply(1:P(sim)$nTrials, getRandomStarts), list(unname(DEoptimBestMem/oom(DEoptimBestMem))))
   } 
@@ -518,8 +518,8 @@ fireSense_SizeFitRun <- function(sim)
   
   class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
   
-  if (!is.na(P(sim)$intervalRunModule) && (currentTime + P(sim)$intervalRunModule) <= endTime) # Assumes time only moves forward
-    sim <- scheduleEvent(sim, currentTime + P(sim)$intervalRunModule, moduleName, "run")
+  if (!is.na(P(sim)$.runInterval)) # Assumes time only moves forward
+    sim <- scheduleEvent(sim, currentTime + P(sim)$.runInterval, moduleName, "run")
   
   invisible(sim)
 }
