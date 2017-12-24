@@ -2,11 +2,13 @@ library(SpaDES)
 
 ## TODO: Expliquer que les coefficients du trace sont scalés et également que les bounds doivent être scalées (ou modif code).
 
+modulePath <- normalizePath("..")
+
 # Define simulation parameters
 times <- list(start = 1, end = 1, timeunit = "year")
 modules <- list("fireSense_SizeFit")
 paths <- list(
-  modulePath = file.path("~/Documents/GitHub/McIntire-lab/modulesPrivate/") ## TODO: change this to /path/to/modules/
+  modulePath = modulePath
 )
 
 # Examples of model formula
@@ -30,7 +32,7 @@ parameters <- list(
 # Define from where and how data will be loaded in the simList environment
 inputs <- data.frame(
   objectName = "dataFireSense_SizeFit",
-  file = "C:/Z/Contrats/Pessiere/DataInputs/dataFireSense_SizeFit_foudre.rds",
+  file = normalizePath("../inputs/dataFireSense_SizeFit.rds"),
   fun = "readRDS",
   package = "base",
   loadTime = 1
