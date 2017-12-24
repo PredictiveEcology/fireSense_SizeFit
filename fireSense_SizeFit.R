@@ -43,7 +43,9 @@ defineModule(sim, list(
                     desc = "a character vector indicating the names of objects 
                             in the `simList` environment in which to look for
                             variables present in the model formula. `data`
-                            objects should be data.frames."),
+                            objects should be data.frames. If variables are not
+                            found in `data` objects, they are searched in the
+                            `simList` environment."),
     defineParameter(name = "start", class = "list", default = NULL,
                     desc = "optional named list with two elements, 'beta' and 
                             'theta', specifying starting values for the 
@@ -219,6 +221,9 @@ fireSense_SizeFitRun <- function(sim)
   # Create a container to hold the data
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
+
+  # Load inputs in the data container
+  list2env(as.list(envir(sim)), envir = envData)
   
   for (x in P(sim)$data) 
   {
