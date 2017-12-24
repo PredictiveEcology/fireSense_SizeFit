@@ -12,11 +12,11 @@ paths <- list(
 )
 
 # Examples of model formula
-formula_1v <- list(beta = formula(size_fire ~ MDC_06),
-                   theta = formula(size_fire ~ MDC_57))
+formula_1v <- list(beta = formula(fireSize ~ MDC_06),
+                   theta = formula(fireSize ~ MDC_07))
 
-formula_6v <- list(beta = formula(size_fire ~ MDC_06 + hw + dt + wt + ot),
-                   theta = formula(size_fire ~ MDC_57 + hw + dt + wt + ot))
+formula_6v <- list(beta = formula(fireSize ~ MDC_06 + hw + dt + wt + ot),
+                   theta = formula(fireSize ~ MDC_07 + hw + dt + wt + ot))
 
 # Define module parameters
 parameters <- list(
