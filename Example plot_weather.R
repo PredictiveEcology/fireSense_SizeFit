@@ -56,7 +56,7 @@ sim <- spades(sim)
 # Plots
 # Influence of weather of the fire size distribution
 sizeSeq <- seq(1, 1e5, length.out = 1000)
-probs <- with(sim$fireSense_SizePredicted[[as.character(start)]],
+probs <- with(sim$fireSense_SizePredicted,
               unlist(Map(f = ptappareto, lambda = beta, theta = theta, MoreArgs = list(q = sizeSeq, a = a, lower.tail = FALSE))))
 
 plotData <- data_frame(prob = pmax(probs, .Machine$double.neg.eps), group = rep(1:10, each = length(sizeSeq)))
@@ -82,7 +82,7 @@ survY <- function(y) c(rep(y[-length(y)], each = 2), y[length(y)])
 pp <- ppoints(sort(dummyData$fireSize))
 
 surv_tapPareto <- bind_rows(
-  !!! lapply(1:100, function(i) with(sim$fireSense_SizePredicted[[as.character(start)]],
+  !!! lapply(1:100, function(i) with(sim$fireSense_SizePredicted,
                                      quantile(rtappareto(1000, lambda = rep(beta, each = 100), theta = rep(theta, each = 100), a = a), 1-pp)) )
 )
 
