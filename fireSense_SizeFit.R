@@ -355,13 +355,29 @@ fireSense_SizeFitRun <- function(sim)
       if (is.null(P(sim)$ub$t))
       {
         ## Automatically estimate an upper boundary for each parameter
-        (suppressWarnings(glm(formulaTheta,
-             family = gaussian(link = lnT$name),
-             y = FALSE,
-             model = FALSE,
-             data = envData)) %>%
-           coef %>%
-           abs) * 1.1
+        (suppressWarnings(
+          tryCatch(
+            glm(
+              formulaTheta,
+              family = gaussian(link = lnT$name),
+              y = FALSE,
+              model = FALSE,
+              data = envData
+            ),
+            error = function(e) stop(
+              moduleName, "> Automated estimation of upper bounds", 
+              " (theta) failed, please set the 'theta' element of ",
+              "the 'ub' parameter."
+            )
+          )
+        ) %>% coef %>% abs) * 1.1 -> ub
+        
+        if (anyNA(ub))
+          stop(
+            moduleName, "> Automated estimation of upper bounds (theta) failed, ",
+            "please set the 'theta' element of the 'ub' parameter."
+          )
+        else ub
       } 
       else rep_len(P(sim)$ub$t, nT) ## User-defined bounds (recycled if necessary)
     )
