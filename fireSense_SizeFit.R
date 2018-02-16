@@ -148,9 +148,9 @@ fireSense_SizeFitInit <- function(sim)
   stopifnot(P(sim)$nCores >= 1)
   stopifnot(P(sim)$itermax >= 1)
   stopifnot(P(sim)$nTrials >= 1)
-  if (!is(P(sim)$formula$beta, "formula")) stop(paste0(moduleName, "> The supplied object for the 'formula' parameter (beta) is not of class formula."))
-  if (!is(P(sim)$formula$theta, "formula")) stop(paste0(moduleName, "> The supplied object for the 'formula' parameter (theta) is not of class formula."))
-  if (is.null(P(sim)$a)) stop(paste0(moduleName, "> Parameter 'a' is missing."))
+  if (!is(P(sim)$formula$beta, "formula")) stop(moduleName, "> The supplied object for the 'formula' parameter (beta) is not of class formula.")
+  if (!is(P(sim)$formula$theta, "formula")) stop(moduleName, "> The supplied object for the 'formula' parameter (theta) is not of class formula.")
+  if (is.null(P(sim)$a)) stop(moduleName, "> Parameter 'a' is missing.")
   stopifnot(P(sim)$a > 0)
   
   sim <- scheduleEvent(sim, eventTime = P(sim)$.runInitialTime, moduleName, "run")
@@ -228,29 +228,29 @@ fireSense_SizeFitRun <- function(sim)
       {
         list2env(sim[[x]], envir = envData)
       }
-      else stop(paste0(moduleName, "> '", x, "' is not a data.frame."))
+      else stop(moduleName, "> '", x, "' is not a data.frame.")
     }
   }
 
   ## Check formula for beta
   if (is.empty.model(P(sim)$formula$b))
-    stop(paste0(moduleName, "> The formula (beta) describes an empty model."))
+    stop(moduleName, "> The formula (beta) describes an empty model.")
   
   ## Check formula for theta
   if (is.empty.model(P(sim)$formula$t))
-    stop(paste0(moduleName, "> The formula (theta) describes an empty model."))
+    stop(moduleName, "> The formula (theta) describes an empty model.")
 
   termsBeta <- terms.formula(formulaBeta <- P(sim)$formula$b)
   termsTheta <- terms.formula(formulaTheta <- P(sim)$formula$t)
     
   if (attr(termsBeta, "response")) y <- yBeta <- as.character(formulaBeta[[2L]])
-  else stop(paste0(moduleName, "> Incomplete formula (beta), the LHS is missing."))
+  else stop(moduleName, "> Incomplete formula (beta), the LHS is missing.")
   
   if (attr(termsTheta, "response")) yTheta <- as.character(formulaTheta[[2L]])
-  else stop(paste0(moduleName, "> Incomplete formula (theta), the LHS is missing."))
+  else stop(moduleName, "> Incomplete formula (theta), the LHS is missing.")
   
   if (!identical(yBeta, yTheta))
-    stop(paste0(moduleName, "> The response variable for beta and theta must be identical."))
+    stop(moduleName, "> The response variable for beta and theta must be identical.")
     
   allxy = unique(sort(c(all.vars(termsBeta, "variables"),
                  all.vars(termsTheta, "variables"))))
@@ -258,9 +258,9 @@ fireSense_SizeFitRun <- function(sim)
   missing <- !allxy %in% ls(envData, all.names = TRUE)
   
   if (s <- sum(missing))
-    stop(paste0(moduleName, "> '", allxy[missing][1L], "'",
-                if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
-                " not found in data objects nor in the simList environment."))
+    stop(moduleName, "> '", allxy[missing][1L], "'",
+         if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
+         " not found in data objects nor in the simList environment.")
   
 
   ## Coerce lnB to a link-glm object
@@ -298,12 +298,12 @@ fireSense_SizeFitRun <- function(sim)
 
   if (all(rm)) 
   { 
-    stop(paste0(moduleName, "> All x values are outside of the range a <= x < Inf."))
+    stop(moduleName, "> All x values are outside of the range a <= x < Inf.")
   } 
   else if (any(rm))
   {
     lapply(unique(c(all.vars(termsBeta), all.vars(termsTheta))), function(x) assign(x = x, value = envData[[x]][!rm], envir = envData))
-    warning(paste0(moduleName, "> Ignored ", sum(rm), " rows containing values outside of the range a <= x < Inf."), immediate. = TRUE)
+    warning(moduleName, "> Ignored ", sum(rm), " rows containing values outside of the range a <= x < Inf.", immediate. = TRUE)
   }
 
   ## Number of terms
@@ -326,13 +326,29 @@ fireSense_SizeFitRun <- function(sim)
       if (is.null(P(sim)$ub$b)) 
       {
         ## Automatically estimate an upper boundary for each parameter
-        (suppressWarnings(glm(formulaBeta, ## family gaussian link 
-             family = gaussian(link = lnB$name),
-             y = FALSE,
-             model = FALSE,
-             data = envData)) %>%
-           coef %>%
-           abs) * 1.1
+        (suppressWarnings(
+          tryCatch(
+            glm(
+              formulaBeta, ## family gaussian link 
+              family = gaussian(link = lnB$name),
+              y = FALSE,
+              model = FALSE,
+              data = envData
+            ),
+            error = function(e) stop(
+              moduleName, "> Automated estimation of upper bounds", 
+              " (beta) failed, please set the 'beta' element of ",
+              "the 'ub' parameter."
+            )
+          )
+        ) %>% coef %>% abs) * 1.1 -> ub
+        
+        if (anyNA(ub))
+          stop(
+            moduleName, "> Automated estimation of upper bounds (beta) failed, ",
+            "please set the 'coef' element of the 'ub' parameter."
+          )
+        else ub
       }
       else rep_len(P(sim)$ub$b, nB), ## User-defined bounds (recycled if necessary)
       
@@ -355,16 +371,16 @@ fireSense_SizeFitRun <- function(sim)
       switch(lnB$name,
              log = {
                
-                 if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3 ## Automatically estimate a lower boundary for each parameter
-                 else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
+               if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3 ## Automatically estimate a lower boundary for each parameter
+               else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
              }, identity = {
                
-                 if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3
-                 else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
+               if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3
+               else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
                
-             }, stop(paste0(moduleName, "> Link function ", P(sim)$link$b, 
-                            " (beta) is not supported by the process for automated estimation of lower bounds."))
+             }, stop(moduleName, "> Link function ", P(sim)$link$b, 
+                     " (beta) is not supported by the process for automated estimation of lower bounds.")
       )
 
   ## Theta
@@ -480,14 +496,14 @@ fireSense_SizeFitRun <- function(sim)
   {
     convergence <- FALSE
     convergDiagnostic <- paste0("nlminb optimizer did not converge (", out$message, ")")
-    warning(paste0(moduleName, "> ", convergDiagnostic), immediate. = TRUE)
+    warning(moduleName, "> ", convergDiagnostic, immediate. = TRUE)
   } 
   else if(anyNA(se)) 
   {
     ## Negative values in the Hessian matrix suggest that the algorithm did not converge
     convergence <- FALSE
     convergDiagnostic <- "nlminb optimizer reached relative convergence, saddle point?"
-    warning(paste0(moduleName, "> ", convergDiagnostic), immediate. = TRUE)
+    warning(moduleName, "> ", convergDiagnostic, immediate. = TRUE)
   }
   else 
   {
