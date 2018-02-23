@@ -346,7 +346,7 @@ fireSense_SizeFitRun <- function(sim)
         if (anyNA(ub))
           stop(
             moduleName, "> Automated estimation of upper bounds (beta) failed, ",
-            "please set the 'coef' element of the 'ub' parameter."
+            "please set the 'beta' element of the 'ub' parameter."
           )
         else ub
       }
