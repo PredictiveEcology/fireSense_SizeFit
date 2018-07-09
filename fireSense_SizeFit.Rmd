@@ -8,7 +8,7 @@ output:
 ---
 
 # Overview
-Fit statistical models of the fire size distribution. A tapered Pareto distribution is assumed. This distribution has three parameters: $a$, $\beta$ and $\theta$; $a$ is the lower truncation point and is assumed to be known $a$ priori, $\beta$ controls the rate of frequency decrease as the fire size increases, and $\theta$ governs the location of the exponential taper. This module can be used to relate $\beta$ and $\theta$ with environmental controls of the fire size distribution.
+Fit statistical models of the fire size distribution. A tapered Pareto distribution is assumed. This distribution has three parameters: $a$, $\beta$ and $\theta$; $a$ is the lower truncation point and is assumed to be known a priori, $\beta$ controls the rate of frequency decrease as the fire size increases, and $\theta$ governs the location of the exponential taper. This module can be used to relate $\beta$ and $\theta$ with environmental controls of the fire size distribution.
 
 
 # Download the module
