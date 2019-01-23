@@ -525,7 +525,7 @@ sizeFitRun <- function(sim)
   ## Parameters scaling: Revert back estimated coefficients to their original scale
   out$par <- drop(out$par %*% sm)
 
-  sim$sizeFitted <- 
+  sim$fireSense_SizeFitted <- 
     list(formula = P(sim)$formula,
          a = P(sim)$a,
          link = list(beta = lnB, theta = lnT),
@@ -539,7 +539,7 @@ sizeFitRun <- function(sim)
          convergenceDiagnostic = convergDiagnostic
     )
   
-  class(sim$sizeFitted) <- "fireSense_SizeFit"
+  class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
   
   if (!is.na(P(sim)$.runInterval)) # Assumes time only moves forward
     sim <- scheduleEvent(sim, currentTime + P(sim)$.runInterval, moduleName, "run")
@@ -555,7 +555,7 @@ sizeFitSave <- function(sim)
   currentTime <- time(sim, timeUnit)
   
   saveRDS(
-    sim$sizeFitted, 
+    sim$fireSense_SizeFitted, 
     file = file.path(paths(sim)$out, paste0("fireSense_SizeFitted_", timeUnit, currentTime, ".rds"))
   )
   
