@@ -172,7 +172,7 @@ sizeFitRun <- function(sim)
       oom <- function(x) 10 ^ (ceiling(log10(abs(x))))
     
     ## Function to pass to the optimizer
-      objfun <- function(params, sm, mmB, mmT, nB, n, linkinvB, linkinvT, y, envData) 
+      objfun <- function(params, sm, mmB, mmT, nB, n, linkinvB, linkinvT, y) 
       {
         ## Parameters scaling
         params <- drop(params %*% sm)
@@ -188,7 +188,7 @@ sizeFitRun <- function(sim)
         theta <- linkinvT(theta)
         
         if(any(beta <= 0L) || anyNA(beta) || any(is.infinite(beta)) || any(theta <= 0L) || anyNA(theta) || any(is.infinite(theta))) return(1e20)
-        else return(eval(nll))
+        else return(eval(mod$nll))
       }
   
     ## Nlminb wrapper
@@ -213,12 +213,8 @@ sizeFitRun <- function(sim)
         o
       }  
       
-  # Create a container to hold the data
-  envData <- new.env(parent = envir(sim))
-  on.exit(rm(envData))
-
   # Load inputs in the data container
-  list2env(as.list(envir(sim)), envir = envData)
+  list2env(as.list(envir(sim)), envir = mod)
   
   for (x in P(sim)$data) 
   {
@@ -226,7 +222,7 @@ sizeFitRun <- function(sim)
     {
       if (is.data.frame(sim[[x]]))
       {
-        list2env(sim[[x]], envir = envData)
+        list2env(sim[[x]], envir = mod)
       }
       else stop(moduleName, "> '", x, "' is not a data.frame.")
     }
@@ -255,7 +251,7 @@ sizeFitRun <- function(sim)
   allxy = unique(sort(c(all.vars(termsBeta, "variables"),
                  all.vars(termsTheta, "variables"))))
   
-  missing <- !allxy %in% ls(envData, all.names = TRUE)
+  missing <- !allxy %in% ls(mod, all.names = TRUE)
   
   if (s <- sum(missing))
     stop(moduleName, "> '", allxy[missing][1L], "'",
@@ -294,7 +290,7 @@ sizeFitRun <- function(sim)
   trace <- P(sim)$trace
 
   ## If there are rows in the dataset where y < a, remove them
-  rm <- envData[[y]] < P(sim)$a
+  rm <- mod[[y]] < P(sim)$a
 
   if (all(rm)) 
   { 
@@ -302,7 +298,7 @@ sizeFitRun <- function(sim)
   } 
   else if (any(rm))
   {
-    lapply(unique(c(all.vars(termsBeta), all.vars(termsTheta))), function(x) assign(x = x, value = envData[[x]][!rm], envir = envData))
+    lapply(unique(c(all.vars(termsBeta), all.vars(termsTheta))), function(x) assign(x = x, value = mod[[x]][!rm], envir = mod))
     warning(moduleName, "> Ignored ", sum(rm), " rows containing values outside of the range a <= x < Inf.", immediate. = TRUE)
   }
 
@@ -317,8 +313,8 @@ sizeFitRun <- function(sim)
   diag(sm) <- 1
 
   ## Design matrices
-  mmB <- model.matrix(termsBeta, envData)
-  mmT <- model.matrix(termsTheta, envData)
+  mmB <- model.matrix(termsBeta, mod)
+  mmT <- model.matrix(termsTheta, mod)
 
   ## Define parameter bounds automatically if they are not supplied by user
   ## First defined the bounds for DEoptim, the first optimizer
@@ -333,7 +329,7 @@ sizeFitRun <- function(sim)
               family = gaussian(link = lnB$name),
               y = FALSE,
               model = FALSE,
-              data = envData
+              data = mod
             ),
             error = function(e) stop(
               moduleName, "> Automated estimation of upper bounds", 
@@ -362,7 +358,7 @@ sizeFitRun <- function(sim)
               family = gaussian(link = lnT$name),
               y = FALSE,
               model = FALSE,
-              data = envData
+              data = mod
             ),
             error = function(e) stop(
               moduleName, "> Automated estimation of upper bounds", 
@@ -438,7 +434,7 @@ sizeFitRun <- function(sim)
       )
 
   ## Define the log-likelihood function (objective function)
-  sim$nll <- parse(text = paste0("-sum(dtappareto(envData[[\"", y, "\"]], lambda=beta, theta=theta, a=", P(sim)$a, ", log=TRUE))"))
+  mod$nll <- parse(text = paste0("-sum(dtappareto(mod[[\"", y, "\"]], lambda=beta, theta=theta, a=", P(sim)$a, ", log=TRUE))"))
 
   if (P(sim)$nCores > 1) 
   {
