@@ -318,6 +318,7 @@ sizeFitRun <- function(sim)
 
   ## Define parameter bounds automatically if they are not supplied by user
   ## First defined the bounds for DEoptim, the first optimizer
+    ## Beta
     DEoptimUB <- c(
       if (is.null(P(sim)$ub$b)) 
       {
@@ -347,7 +348,8 @@ sizeFitRun <- function(sim)
         else ub
       }
       else rep_len(P(sim)$ub$b, nB), ## User-defined bounds (recycled if necessary)
-      
+    
+    ## Theta  
       if (is.null(P(sim)$ub$t))
       {
         ## Automatically estimate an upper boundary for each parameter
@@ -379,38 +381,38 @@ sizeFitRun <- function(sim)
     )
 
     ## Beta
-    DEoptimLB <- 
-      switch(lnB$name,
+      DEoptimLB <- 
+        switch(lnB$name,
+               log = {
+                 
+                 if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3 ## Automatically estimate a lower boundary for each parameter
+                 else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
+                 
+               }, identity = {
+                 
+                 if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3
+                 else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
+                 
+               }, stop(moduleName, "> Link function ", P(sim)$link$b, 
+                       " (beta) is not supported by the process for automated estimation of lower bounds.")
+        )
+
+    ## Theta
+      DEoptimLB <- c(DEoptimLB,
+        switch(lnT$name,
              log = {
                
-               if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3 ## Automatically estimate a lower boundary for each parameter
-               else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
+               if (is.null(P(sim)$lb$t)) -abs(DEoptimUB[(nB + 1L):n]) * 3 ## Automatically estimate a lower boundary for each parameter
+               else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
                
              }, identity = {
                
-               if (is.null(P(sim)$lb$b)) -abs(DEoptimUB[1:nB]) * 3
-               else rep_len(P(sim)$lb$b, nB) ## User-defined bounds (recycled if necessary)
+               if (is.null(P(sim)$lb$t)) -abs(DEoptimUB[(nB + 1L):n]) * 3
+               else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
                
-             }, stop(moduleName, "> Link function ", P(sim)$link$b, 
-                     " (beta) is not supported by the process for automated estimation of lower bounds.")
+             }
+        )
       )
-
-  ## Theta
-    DEoptimLB <- c(DEoptimLB,
-      switch(lnT$name,
-           log = {
-             
-             if (is.null(P(sim)$lb$t)) -abs(DEoptimUB[(nB + 1L):n]) * 3 ## Automatically estimate a lower boundary for each parameter
-             else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
-             
-           }, identity = {
-             
-             if (is.null(P(sim)$lb$t)) -abs(DEoptimUB[(nB + 1L):n]) * 3
-             else rep_len(P(sim)$lb$t, nT) ## User-defined bounds (recycled if necessary)
-             
-           }
-      )
-    )
   
     ## Then, define lower and upper bounds for the second optimizer (nlminb)
     ## Beta
