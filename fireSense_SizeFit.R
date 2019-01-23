@@ -124,9 +124,9 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE)
 {
   switch(
     eventType,
-    init = { sim <- sim$fireSense_SizeFitInit(sim) },
-    run = { sim <- sim$fireSense_SizeFitRun(sim) },
-    save = { sim <- sim$fireSense_SizeFitSave(sim) },
+    init = { sim <- sizeFitInit(sim) },
+    run = { sim <- sizeFitRun(sim) },
+    save = { sim <- sizeFitSave(sim) },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
   )
@@ -139,7 +139,7 @@ doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE)
 #   - `modulenameInit()` function is required for initiliazation;
 #   - keep event functions short and clean, modularize by calling subroutines from section below.
 
-fireSense_SizeFitInit <- function(sim) 
+sizeFitInit <- function(sim) 
 {
   moduleName <- current(sim)$moduleName
   
@@ -161,7 +161,7 @@ fireSense_SizeFitInit <- function(sim)
   invisible(sim)
 }
 
-fireSense_SizeFitRun <- function(sim)
+sizeFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
   currentTime <- time(sim, timeunit(sim))
@@ -552,7 +552,7 @@ fireSense_SizeFitRun <- function(sim)
 }
 
 
-fireSense_SizeFitSave <- function(sim) 
+sizeFitSave <- function(sim) 
 {
   moduleName <- current(sim)$moduleName
   timeUnit <- timeunit(sim)
