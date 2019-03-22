@@ -43,9 +43,7 @@ defineModule(sim, list(
                     desc = "a character vector indicating the names of objects 
                             in the `simList` environment in which to look for
                             variables present in the model formula. `data`
-                            objects should be data.frames. If variables are not
-                            found in `data` objects, they are searched in the
-                            `simList` environment."),
+                            objects should be data.frames."),
     defineParameter(name = "start", class = "list", default = NULL,
                     desc = "optional named list with two elements, 'beta' and 
                             'theta', specifying starting values for the 
@@ -83,10 +81,10 @@ defineModule(sim, list(
                     desc = "non-negative integer. If > 0, tracing information on
                             the progress of the optimization are printed every
                             `trace` iteration. If parallel computing is enable, 
-                            nlminb trace logs are written to disk. Log files are
-                            prefixed with 'fireSense_SizeFit_trace'
-                            followed by the subprocess pid. Default is 0, which
-                            turns off tracing."),    
+                            nlminb trace logs are written into the working directory. 
+                            Log files are prefixed with 'fireSense_SizeFit_trace'
+                            followed by the nodename (see ?Sys.info) and the
+                            subprocess pid. Default is 0, which turns off tracing."),    
     defineParameter(name = "nlminb.control", class = "numeric",
                     default = list(iter.max = 5e3L, eval.max = 5e3L),
                     desc = "optional list of control parameters to be passed to
@@ -122,11 +120,30 @@ defineModule(sim, list(
 
 doEvent.fireSense_SizeFit = function(sim, eventTime, eventType, debug = FALSE) 
 {
+  moduleName <- current(sim)$moduleName
+  
   switch(
     eventType,
-    init = { sim <- sizeFitInit(sim) },
-    run = { sim <- sizeFitRun(sim) },
-    save = { sim <- sizeFitSave(sim) },
+    init = { 
+      sim <- sizeFitInit(sim)
+      
+      sim <- scheduleEvent(sim, eventTime = P(sim)$.runInitialTime, moduleName, "run")
+      
+      if (!is.na(P(sim)$.saveInitialTime))
+        sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, moduleName, "save", .last())
+    },
+    run = { 
+      sim <- sizeFitRun(sim) 
+      
+      if (!is.na(P(sim)$.runInterval))
+        sim <- scheduleEvent(sim, time(sim) + P(sim)$.runInterval, moduleName, "run")
+    },
+    save = { 
+      sim <- sizeFitSave(sim) 
+      
+      if (!is.na(P(sim)$.saveInterval))
+        sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, moduleName, "save", .last())
+    },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
   )
@@ -153,19 +170,12 @@ sizeFitInit <- function(sim)
   if (is.null(P(sim)$a)) stop(moduleName, "> Parameter 'a' is missing.")
   stopifnot(P(sim)$a > 0)
   
-  sim <- scheduleEvent(sim, eventTime = P(sim)$.runInitialTime, moduleName, "run")
-  
-  if (!is.na(P(sim)$.saveInitialTime))
-    sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, moduleName, "save", .last())
-  
   invisible(sim)
 }
 
 sizeFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
-  currentTime <- time(sim, timeunit(sim))
-  endTime <- end(sim, timeunit(sim))
   
   ## Toolbox: set of functions used internally by the module
     ## Compute the order of magnitude
@@ -214,7 +224,7 @@ sizeFitRun <- function(sim)
       }  
       
   # Load inputs in the data container
-  list2env(as.list(envir(sim)), envir = mod)
+  # list2env(as.list(envir(sim)), envir = mod)
   
   for (x in P(sim)$data) 
   {
@@ -485,7 +495,10 @@ sizeFitRun <- function(sim)
   {
     if (P(sim)$nCores > 1) 
     {
-      if (trace) clusterEvalQ(cl, sink(paste0("fireSense_SizeFit_trace.", Sys.getpid())))
+      if (trace) clusterEvalQ(
+        cl, 
+        sink(file.path(getwd(), paste0(moduleName, "_trace.", Sys.info()[["nodename"]], ".", Sys.getpid())))
+      )
       
       out <- clusterApplyLB(cl = cl, x = start, fun = objNlminb, objective = objfun, lower = nlminbLB, upper = nlminbUB, control = c(P(sim)$nlminb.control, list(trace = trace)))
       
@@ -543,16 +556,12 @@ sizeFitRun <- function(sim)
   
   class(sim$fireSense_SizeFitted) <- "fireSense_SizeFit"
   
-  if (!is.na(P(sim)$.runInterval)) # Assumes time only moves forward
-    sim <- scheduleEvent(sim, currentTime + P(sim)$.runInterval, moduleName, "run")
-  
   invisible(sim)
 }
 
 
 sizeFitSave <- function(sim) 
 {
-  moduleName <- current(sim)$moduleName
   timeUnit <- timeunit(sim)
   currentTime <- time(sim, timeUnit)
   
@@ -560,9 +569,6 @@ sizeFitSave <- function(sim)
     sim$fireSense_SizeFitted, 
     file = file.path(paths(sim)$out, paste0("fireSense_SizeFitted_", timeUnit, currentTime, ".rds"))
   )
-  
-  if (!is.na(P(sim)$.saveInterval))
-    sim <- scheduleEvent(sim, currentTime + P(sim)$.saveInterval, moduleName, "save", .last())
   
   invisible(sim)
 }

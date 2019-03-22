@@ -29,14 +29,14 @@ Name|Default|Description
 `formula`|`list(beta = NA,`<br>&emsp;&emsp;&emsp;`theta = NA)`|a named list with two elements, 'beta' and 'theta', describing the model to be fitted. 'beta' and 'theta' should be formulas (see `?formula`).
 `a`||lower truncation point $a$ of the tapered Pareto. The random variable $x$ take values on the interval $a <= x < Inf$. Values outside of this range are ignored with a warning.
 `link`|`list(beta = "log",`<br>&emsp;&emsp;&emsp;`theta = "log")`|a named list with two elements, 'beta' and 'theta', specifying link functions for $\beta$ and $\theta$ parameters of the tapered Pareto. These can be character strings or objects of class link-glm. For more additional details see `?family`.
-`data`|`"dataFireSense_SizeFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects should be data.frames. If variables are not found in `data` objects, they are searched in the `simList` environment.
+`data`|`"dataFireSense_SizeFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects should be data.frames.
 `start`|`NULL`|optional named list with two elements, 'beta' and 'theta', specifying starting values for the coefficients to be estimated. Those are passed to `nlminb` and can be a single vector, or a list of vectors. In the latter case, only the best solution, that is, the one which minimizes the most the objective function, is kept.
 `lb`|`NULL`|optional named list with two elements, 'beta' and 'theta', specifying lower bounds for the coefficients to be estimated. These must be finite and will be recycled if necessary to match `length(coefficients)`.
 `ub`|`NULL`|optional named list with two elements, 'beta' and 'theta', specifying upper bounds for the coefficients to be estimated. These must be finite and will be recycled if necessary to match `length(coefficients)`.
 `itermax`|`2000`|integer defining the maximum number of iterations allowed (DEoptim optimizer).
 `nTrials`|`500`|if start is not supplied, `nTrials` defines the number of trials, or searches, to be performed by the nlminb optimizer in order to find the best solution.
 `nCores`|`1`|non-negative integer. Defines the number of logical cores to be used for parallel computation. The default value is 1, which disables parallel computing.
-`trace`|`0`|non-negative integer. If > 0, tracing information on the progress of the optimization are printed every `trace` iteration. If parallel computing is enable, nlminb trace logs are written to disk. Logs files are prefixed with 'fireSense_FrequencyFit_trace' followed by the subprocess pid. Default is 0, which turns off tracing.
+`trace`|`0`|non-negative integer. If > 0, tracing information on the progress of the optimization are printed every `trace` iteration. If parallel computing is enable, nlminb trace logs are written into the working directory. Log files are prefixed with 'fireSense_SizeFit_trace' followed by the nodename (see ?Sys.info) and the subprocess pid. Default is 0, which turns off tracing.
 `nlminb.control`|`list(iter.max = 5e3L,`<br>&emsp;&emsp;&emsp;`eval.max=5e3L`)|optional list of control parameters to be passed to the `nlminb` optimizer. See `?nlminb`.
 `.runInitialTime`|`start(simList)`|when to start this module? By default, the start time of the simulation.
 `.runInterval`|`NA`|optional. Interval between two runs of this module, expressed in units of simulation time.
@@ -49,6 +49,8 @@ Name|Default|Description
 library(SpaDES)
 
 set.seed(123)
+
+spadesModulesDirectory <- ".."
 
 times <- list(start = 1, end = 1, timeunit = "year")
 modules <- list("fireSense_SizeFit")
@@ -92,7 +94,7 @@ sim$fireSense_SizeFitted
 # Events
 Events are scheduled as follows:
 
-- Module initiation
+- Module initialisation
 - Model fitting
 
 # Data dependencies
