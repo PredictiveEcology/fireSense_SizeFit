@@ -226,6 +226,8 @@ sizeFitRun <- function(sim)
   # Load inputs in the data container
   # list2env(as.list(envir(sim)), envir = mod)
   
+  mod_env <- new.env()
+  
   for (x in P(sim)$data) 
   {
     if (!is.null(sim[[x]])) 
