@@ -450,7 +450,12 @@ sizeFitRun <- function(sim)
 
   if (P(sim)$nCores > 1) 
   {
-    cl <- parallel::makePSOCKcluster(names = P(sim)$nCores)
+    if (.Platform$OS.type == "unix")
+      mkCluster <- parallel::makeForkCluster
+    else
+      mkCluster <- parallel::makePSOCKcluster
+    
+    cl <- mkCluster(P(sim)$nCores)
     on.exit(stopCluster(cl))
     parallel::clusterEvalQ(cl, library("PtProcess"))
   }
