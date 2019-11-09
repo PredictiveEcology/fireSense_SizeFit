@@ -64,15 +64,15 @@ defineModule(sim, list(
                             for the coefficients to be estimated. These 
                             must be finite and will be recycled if necessary to
                             match `length(coefficients)`."),
-    defineParameter(name = "nIterDEoptim", class = "integer", default = 2000,
+    defineParameter(name = "iterDEoptim", class = "integer", default = 2000,
                     desc = "integer defining the maximum number of iterations 
                             allowed (DEoptim optimizer). Default is 2000."),
-    defineParameter(name = "nIterNlminb", class = "integer", default = 500, 
-                    desc = "if start is not supplied, nIterNlminb defines 
+    defineParameter(name = "iterNlminb", class = "integer", default = 500, 
+                    desc = "if start is not supplied, iterNlminb defines 
                             the number of trials, or searches, to be performed
                             by the nlminb optimizer in order to find the best
                             solution. Default is 500."),
-    defineParameter(name = "nCores", class = "integer", default = 1, 
+    defineParameter(name = "cores", class = "integer", default = 1, 
                     desc = "non-negative integer. Defines the number of logical
                             cores to be used for parallel computation. The
                             default value is 1, which disables parallel 
@@ -162,9 +162,9 @@ sizeFitInit <- function(sim)
   
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
-  stopifnot(P(sim)$nCores >= 1)
-  stopifnot(P(sim)$nIterDEoptim >= 1)
-  stopifnot(P(sim)$nIterNlminb >= 1)
+  stopifnot(P(sim)$cores >= 1)
+  stopifnot(P(sim)$iterDEoptim >= 1)
+  stopifnot(P(sim)$iterNlminb >= 1)
   if (!is(P(sim)$formula$beta, "formula")) stop(moduleName, "> The supplied object for the 'formula' parameter (beta) is not of class formula.")
   if (!is(P(sim)$formula$theta, "formula")) stop(moduleName, "> The supplied object for the 'formula' parameter (theta) is not of class formula.")
   if (is.null(P(sim)$a)) stop(moduleName, "> Parameter 'a' is missing.")
@@ -450,14 +450,14 @@ sizeFitRun <- function(sim)
   ## Define the log-likelihood function (objective function)
   mod_env$nll <- parse(text = paste0("-sum(dtappareto(mod_env[[\"", y, "\"]], lambda=beta, theta=theta, a=", P(sim)$a, ", log=TRUE))"))
 
-  if (P(sim)$nCores > 1) 
+  if (P(sim)$cores > 1) 
   {
     if (.Platform$OS.type == "unix")
       mkCluster <- parallel::makeForkCluster
     else
       mkCluster <- parallel::makePSOCKcluster
     
-    cl <- mkCluster(P(sim)$nCores)
+    cl <- mkCluster(P(sim)$cores)
     on.exit(stopCluster(cl))
     parallel::clusterEvalQ(cl, library("PtProcess"))
   }
@@ -468,8 +468,8 @@ sizeFitRun <- function(sim)
     ## First optimizer, get rough estimates of the parameter values
     ## Use these estimates to compute the order of magnitude of these parameters
 
-      control <- list(itermax = P(sim)$nIterDEoptim, trace = P(sim)$trace)
-      if(P(sim)$nCores > 1) control$cluster <- cl
+      control <- list(itermax = P(sim)$iterDEoptim, trace = P(sim)$trace)
+      if(P(sim)$cores > 1) control$cluster <- cl
       
       DEoptimCall <- quote(DEoptim(fn = objfun, lower = DEoptimLB, upper = DEoptimUB, control = do.call("DEoptim.control", control)))
       DEoptimCall[names(formals(objfun)[-1])] <- parse(text = formalArgs(objfun)[-1])
@@ -479,7 +479,7 @@ sizeFitRun <- function(sim)
       diag(sm) <- oom(DEoptimBestMem)
 
       getRandomStarts <- function(.) pmin(pmax(rnorm(length(DEoptimBestMem),0L,2L)/10 + unname(DEoptimBestMem/oom(DEoptimBestMem)), nlminbLB), nlminbUB)
-      start <- c(lapply(1:P(sim)$nIterNlminb, getRandomStarts), list(unname(DEoptimBestMem/oom(DEoptimBestMem))))
+      start <- c(lapply(1:P(sim)$iterNlminb, getRandomStarts), list(unname(DEoptimBestMem/oom(DEoptimBestMem))))
   } 
   else 
   {
@@ -500,7 +500,7 @@ sizeFitRun <- function(sim)
   
   out <- if (is.list(start)) 
   {
-    if (P(sim)$nCores > 1) 
+    if (P(sim)$cores > 1) 
     {
       outputPath <- outputPath(sim)
       basePattern <- paste(moduleName, Sys.info()[["nodename"]], format(Sys.time(), "%Y%m%d"), "trace", sep = "_")
