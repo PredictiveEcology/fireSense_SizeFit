@@ -108,7 +108,7 @@ defineModule(sim, list(
     desc = "One or more data.frames in which to look for variables present in the model formula."
   ),
   outputObjects = createsOutput(
-    objectName = "fireSense_SizeFit",
+    objectName = "fireSense_SizeFitted",
     objectClass = "fireSense_SizeFit",
     desc = "A fitted model object of class fireSense_SizeFit."
   )
@@ -542,6 +542,7 @@ sizeFitRun <- function(sim)
   } 
   else if(anyNA(se)) 
   {
+
     ## Negative values in the Hessian matrix suggest that the algorithm did not converge
     convergence <- FALSE
     convergDiagnostic <- "nlminb optimizer reached relative convergence, saddle point?"
